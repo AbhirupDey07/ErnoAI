@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Erno AI — Tutorial First Steps</title>
+<style>
+:root{
+--bg:#0b0c10; --panel:#121420; --ink:#e8eefc; --muted:#92a0b8; --line:#1b2133; --splashA:#11182a;
+--card:#0d1222; --btn:#16233e; --btnBorder:#22325a;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+#brand{position:fixed;left:50%;top:12px;transform:translateX(-50%);font-weight:800;font-size:18px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.4rem .6rem;backdrop-filter:blur(2px);z-index:10}
+#topbar{position:fixed;left:12px;top:12px;display:flex;gap:8px;z-index:10}
+#topright{position:fixed;right:12px;top:12px;z-index:10}
+button{background:var(--btn);border:1px solid var(--btnBorder);color:var(--ink);border-radius:10px;padding:.55rem .8rem;font-weight:800;cursor:pointer}
+button:hover{filter:brightness(1.07)}
+button:disabled{opacity:.55;filter:grayscale(.2);cursor:not-allowed}
+
+#stage{position:absolute;inset:0}
+canvas{display:block;width:100%;height:100%; touch-action:none;}
+
+/* Move Picker */
+#movePicker{position:fixed;right:12px;bottom:12px;z-index:21;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 10px 24px rgba(0,0,0,.35);min-width:min(720px,92vw)}
+#movePicker h3{margin:0 0 6px 0;font-size:13px;font-weight:800}
+.keygrid{display:flex;flex-wrap:wrap;gap:6px}
+.btn-key{
+font-family:ui-monospace,Consolas,monospace;padding:.45rem .65rem;border-radius:10px;border:1px solid var(--btnBorder);background:var(--btn);color:var(--ink);font-weight:800;cursor:pointer;transition:filter .15s ease
+}
+.btn-key:hover{filter:brightness(1.07)}
+.btn-key:focus{outline:2px solid #2f4fb3;outline-offset:1px}
+
+/* Splash (for transitions) */
+#splash{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(1200px 800px at 50% 30%, var(--splashA) 0%, var(--bg) 60%);color:var(--ink);z-index:9999;transition:.4s}
+#splash.hide{opacity:0;visibility:hidden}
+#splash .inner{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.spinner{width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.35);border-top-color:var(--ink);animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Themed confirm modal */
+.modal-backdrop{
+position:fixed; inset:0; background:rgba(0,0,0,.45);
+display:none; place-items:center; z-index:1000; backdrop-filter:blur(2px);
+}
+.modal{
+width:min(520px,92vw); background:var(--panel); color:var(--ink);
+border:1px solid var(--line); border-radius:14px; padding:16px;
+box-shadow:0 16px 40px rgba(0,0,0,.45);
+}
+.modal h3{margin:0 0 6px 0; font-size:18px}
+.modal p{margin:0 0 12px 0; color:var(--muted)}
+.modal .row{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap}
+.modal .btn{
+background:var(--btn); border:1px solid var(--btnBorder); color:var(--ink);
+border-radius:10px; padding:.55rem .9rem; font-weight:800; cursor:pointer;
+}
+.btn-ghost{
+background:transparent; border:1px solid var(--btnBorder); color:var(--ink);
+}
+.modal-backdrop.show{display:grid}
+
+/* --- Coach arrows / captions (make consistent with Daisy) --- */
+.coach{
+  position:fixed; z-index:2000; pointer-events:none; color:var(--ink);
+  font:13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.35));
+  display:flex; flex-direction:column; align-items:center;
+}
+.coach .caption{
+  background:var(--panel);              /* use theme panel, not semi-transparent black */
+  border:1px solid var(--btnBorder);    /* match Daisy’s border */
+  color:var(--ink);
+  padding:.30rem .55rem;
+  border-radius:8px;
+  font-weight:800;
+  white-space:nowrap;
+  text-wrap:balance;
+  max-width:36ch;
+}
+.coach .arrow{
+  width:0;height:0;
+  margin:4px 0;
+  border:9px solid transparent;
+  animation:bob 1.2s ease-in-out infinite;
+  opacity:.95;
+}
+.coach.down .arrow   { border-top-color:var(--panel);}    /* matches Daisy */
+.coach.up   .arrow   { border-bottom-color:var(--panel);} /* matches Daisy */
+.coach.left .arrow   { border-right-color:var(--panel);}  /* optional */
+.coach.right .arrow  { border-left-color:var(--panel);}   /* optional */
+
+@keyframes bob{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(6px);} }
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div id="splash">
+  <div class="inner">
+    <h1>Erno AI<span style="display:block;opacity:.85;font-size:14px;margin-top:6px">Loading First Steps…</span></h1>
+    <div class="spinner" aria-hidden="true"></div>
+  </div>
+</div>
+
+<div id="brand">Erno AI: First Steps</div>
+<div id="topbar">
+  <button id="btn-back">← Back</button>
+  <button id="btn-main">Main Page</button>
+  <button id="btn-scramble">Scramble Cube</button>
+</div>
+<div id="topright">
+  <button id="btn-continue" disabled aria-disabled="true" title="Press Scramble first">Continue →</button>
+</div>
+
+<div id="stage"><canvas id="view"></canvas></div>
+
+<div id="movePicker" role="group" aria-label="Move Picker">
+  <h3>Move Picker <span style="opacity:.8"></span></h3>
+  <div id="moveGrid" class="keygrid"></div>
+</div>
+
+<!-- Themed confirm modal -->
+<div id="confirmWrap" class="modal-backdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmDesc">
+    <h3 id="confirmTitle">Leave this tutorial?</h3>
+    <p id="confirmDesc">You'll lose your tutorial progress if you leave. Are you sure?</p>
+    <div class="row">
+      <button id="confirmCancel" class="btn btn-ghost">Cancel</button>
+      <button id="confirmOk" class="btn">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Coach overlays -->
+<div id="coach-scramble" class="coach up hidden" role="note" aria-live="polite">
+  <div class="arrow" aria-hidden="true"></div>
+  <div class="caption">Your journey begins here</div>
+</div>
+<div id="coach-moves" class="coach down hidden" role="note" aria-live="polite">
+  <div class="caption">Use the <b>Move Picker</b> Keyboard (or manually drag the faces with your finger/mouse) to feel how the cube turns</div>
+  <div class="arrow" aria-hidden="true"></div>
+</div>
+
+<!-- FIXED: arrow now above the caption for the Continue hint -->
+<div id="coach-continue" class="coach down hidden" role="note" aria-live="polite">
+  <div class="arrow" aria-hidden="true"></div>
+  <div class="caption">Proceed when you are ready</div>
+</div>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+(() => {
+// Theme plumbed like index.html (derived vars set)
+(function(){
+const THEMES={default:{v:{bg:'#0b0c10',panel:'#121420',ink:'#e8eefc',muted:'#92a0b8',line:'#1b2133',splashA:'#11182a'}},
+cream:{v:{bg:'#f4efe6',panel:'#fffaf2',ink:'#2c2a25',muted:'#6b665b',line:'#e1d9c9',splashA:'#efe7d8'}},caramel:{v:{bg:'#2a1f1a',panel:'#3b2b22',ink:'#f8e9d4',muted:'#d9c2a8',line:'#4c3a30',splashA:'#3a2a22'}},cyber:{v:{bg:'#0a0f0a',panel:'#0f1510',ink:'#d5ffd5',muted:'#90c990',line:'#183018',splashA:'#0f1c10'}},nord:{v:{bg:'#2e3440',panel:'#3b4252',ink:'#eceff4',muted:'#c0c8d5',line:'#4c566a',splashA:'#323a49'}},dracula:{v:{bg:'#282a36',panel:'#1e2029',ink:'#f8f8f2',muted:'#b6b6c1',line:'#3b3e4b',splashA:'#2f3140'}},solarDark:{v:{bg:'#002b36',panel:'#073642',ink:'#eee8d5',muted:'#93a1a1',line:'#0b3a46',splashA:'#03313c'}},solarLight:{v:{bg:'#fdf6e3',panel:'#f5efd9',ink:'#073642',muted:'#657b83',line:'#e0d2a4',splashA:'#efe8d2'}},catMocha:{v:{bg:'#1e1e2e',panel:'#242437',ink:'#cdd6f4',muted:'#a6adc8',line:'#313244',splashA:'#23233a'}},gruvDark:{v:{bg:'#1d2021',panel:'#282828',ink:'#ebdbb2',muted:'#d5c4a1',line:'#3c3836',splashA:'#232524'}},gruvLight:{v:{bg:'#fbf1c7',panel:'#f2e5bc',ink:'#3c3836',muted:'#7c6f64',line:'#e0d2a4',splashA:'#f5e8bf'}},oneDark:{v:{bg:'#21252b',panel:'#282c34',ink:'#e6efff',muted:'#a0afc1',line:'#323844',splashA:'#252a31'}},synthwave:{v:{bg:'#1b1227',panel:'#231833',ink:'#fedaff',muted:'#d7b6ff',line:'#3a2857',splashA:'#23173a'}},monokai:{v:{bg:'#272822',panel:'#2e2f27',ink:'#f8f8f2',muted:'#c2c2b4',line:'#3b3c34',splashA:'#2c2d26'}},mint:{v:{bg:'#0e1412',panel:'#111a16',ink:'#d9fff2',muted:'#9de5cf',line:'#173026',splashA:'#15231e'}},rosePine:{v:{bg:'#191724',panel:'#1f1d2e',ink:'#e0def4',muted:'#908caa',line:'#2a2837'}},highContrast:{v:{bg:'#000000',panel:'#0a0a0a',ink:'#ffffff',muted:'#bfbfbf',line:'#222',splashA:'#101010'}},mono:{v:{bg:'#111114',panel:'#16171a',ink:'#f1f2f5',muted:'#a9acb3',line:'#272a33',splashA:'#1b1c20'}}};
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};}
+function rgbToHex({r,g,b}){const n=(r<<16)|(g<<8)|b;return'#'+n.toString(16).padStart(6,'0');}
+function mix(a,b,t){const A=hexToRgb(a),B=hexToRgb(b);return rgbToHex({r:Math.round(A.r+(B.r-A.r)*t),g:Math.round(A.g+(B.g-A.g)*t),b:Math.round(A.b+(B.b-A.b)*t)});}
+function apply(id){
+const v=(THEMES[id]||THEMES.default).v;
+const rs=document.documentElement.style;
+rs.setProperty('--bg',v.bg); rs.setProperty('--panel',v.panel); rs.setProperty('--ink',v.ink);
+rs.setProperty('--muted',v.muted); rs.setProperty('--line',v.line); rs.setProperty('--splashA',v.splashA||v.panel);
+rs.setProperty('--card', mix(v.panel, v.bg, 0.15));
+rs.setProperty('--btn', mix(v.panel, v.line, 0.25));
+rs.setProperty('--btnBorder', mix(v.line, v.panel, 0.25));
+}
+apply(localStorage.getItem('erno_theme_v1')||'default');
+})();
+
+const splash=document.getElementById('splash');
+function hideSplash(){ splash.classList.add('hide'); setTimeout(()=>splash.remove(),800); }
+window.addEventListener('load', ()=> setTimeout(hideSplash, 500));
+
+/* ---------- Themed modal wiring ---------- */
+const modal = document.getElementById('confirmWrap');
+const okBtn = document.getElementById('confirmOk');
+const cancelBtn = document.getElementById('confirmCancel');
+let leaveDest = null; // 'main' | 'basics'
+
+function openConfirm(dest){
+  leaveDest = dest;
+  modal.classList.add('show');
+  modal.setAttribute('aria-hidden','false');
+  okBtn.focus();
+}
+function closeConfirm(){
+  modal.classList.remove('show');
+  modal.setAttribute('aria-hidden','true');
+  leaveDest = null;
+}
+modal.addEventListener('click', (e)=>{ if(e.target === modal) closeConfirm(); });
+window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && modal.classList.contains('show')) closeConfirm(); });
+
+okBtn.addEventListener('click', ()=>{
+  if(!leaveDest) return;
+  document.body.appendChild(splash);
+  splash.querySelector('span').textContent = leaveDest==='main' ? 'Returning to Main Page…' : 'Returning to Basics…';
+  modal.classList.remove('show');
+  setTimeout(()=>{ location.href = leaveDest==='main' ? 'index.html' : 'tutorial-basics.html'; }, 300);
+});
+cancelBtn.addEventListener('click', closeConfirm);
+
+document.getElementById('btn-back').addEventListener('click', ()=> openConfirm('basics'));
+document.getElementById('btn-main').addEventListener('click', ()=> openConfirm('main'));
+
+/* ---------- Minimal cube scene ---------- */
+const canvas = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50,1,.1,1000);
+const CAM_INIT_POS = new THREE.Vector3(5.2, 4.7, 6.1);
+const CAM_INIT_TARGET = new THREE.Vector3(0, 0, 0);
+function resetView(){ camera.position.copy(CAM_INIT_POS); camera.lookAt(CAM_INIT_TARGET); }
+resetView();
+scene.add(camera);
+scene.add(new THREE.AmbientLight(0xffffff,.6));
+const key = new THREE.DirectionalLight(0xffffff,.9); key.position.set(3,6,7); scene.add(key);
+const stage = document.getElementById('stage');
+new ResizeObserver(()=>{ const w=stage.clientWidth,h=stage.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}).observe(stage);
+
+const cubeGroup = new THREE.Group(); scene.add(cubeGroup);
+let cubies=[]; const CELL=1, STICKER=.92, GAP=.04;
+const COLORS={ U:0xffd500, D:0xffffff, L:0xcc0000, R:0xff8c1a, F:0x00a040, B:0x0040cc };
+function mkCubie(i,j,k){
+  const core = new THREE.Mesh(new THREE.BoxGeometry(STICKER,STICKER,STICKER), new THREE.MeshStandardMaterial({color:0x111317,roughness:.9}));
+  const g=new THREE.Group(); g.add(core); g.position.set(i*CELL,j*CELL,k*CELL);
+  const faces=[{key:'R',show:i===1,n:new THREE.Vector3(1,0,0)},{key:'L',show:i===-1,n:new THREE.Vector3(-1,0,0)},{key:'U',show:j===1,n:new THREE.Vector3(0,1,0)},{key:'D',show:j===-1,n:new THREE.Vector3(0,-1,0)},{key:'F',show:k===1,n:new THREE.Vector3(0,0,1)},{key:'B',show:k===-1,n:new THREE.Vector3(0,0,-1)}];
+  const pg=new THREE.PlaneGeometry(STICKER-GAP,STICKER-GAP);
+  faces.forEach(f=>{ if(!f.show) return; const s=new THREE.Mesh(pg,new THREE.MeshBasicMaterial({color:COLORS[f.key]})); s.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), f.n); s.position.copy(f.n).multiplyScalar(STICKER/2+0.001); g.add(s); });
+  cubeGroup.add(g); cubies.push(g);
+}
+(function build(){ for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++) for(let k=-1;k<=1;k++) mkCubie(i,j,k); })();
+
+// orbit (Shift+LMB or RMB)
+let orbit=false, px=0, py=0;
+canvas.addEventListener('contextmenu',e=>e.preventDefault(), {passive:false});
+canvas.addEventListener('pointerdown',e=>{ if(e.pointerType!=='mouse') return; if(e.button===2||(e.button===0&&e.shiftKey)){orbit=true;px=e.clientX;py=e.clientY;} },{passive:false});
+canvas.addEventListener('pointerup',()=>{orbit=false;},{passive:false});
+canvas.addEventListener('pointerleave',()=>{orbit=false;},{passive:false});
+canvas.addEventListener('pointermove',e=>{ if(!orbit)return; const dx=e.clientX-px,dy=e.clientY-py; px=e.clientX;py=e.clientY; const sp=0.005,target=new THREE.Vector3(0,0,0); const offset=camera.position.clone().sub(target); offset.applyAxisAngle(new THREE.Vector3(0,1,0),-dx*sp); const view=target.clone().sub(camera.position).normalize(); let right=new THREE.Vector3().crossVectors(view,new THREE.Vector3(0,1,0)); if(right.lengthSq()<1e-8) right=new THREE.Vector3(1,0,0); else right.normalize(); offset.applyAxisAngle(right,-dy*sp); camera.position.copy(target.clone().add(offset)); camera.lookAt(target); },{passive:false});
+window.addEventListener('wheel',e=>{ camera.position.multiplyScalar(1+Math.sign(e.deltaY)*.08).clampLength(4,40); },{passive:true});
+
+// picker + turning (fixed speed = 31)
+const ANIM_MS = Math.max(50, 240 - 31*5);
+const AX={x:new THREE.Vector3(1,0,0),y:new THREE.Vector3(0,1,0),z:new THREE.Vector3(0,0,1)};
+let turning=false;
+function animateTo(pivot, axisVec, start, target, sel, done){
+  turning=true;
+  const dur=ANIM_MS, t0=performance.now();
+  const tick=t=>{ const k=Math.min(1,(t-t0)/dur), ang=start+(target-start)*k; pivot.setRotationFromAxisAngle(axisVec,ang); renderer.render(scene,camera);
+  if(k<1) requestAnimationFrame(tick); else { pivot.updateMatrixWorld(true); for(const c of sel){ cubeGroup.attach(c); c.position.set(Math.round(c.position.x),Math.round(c.position.y),Math.round(c.position.z)); } cubeGroup.remove(pivot); turning=false; done&&done(); } };
+  requestAnimationFrame(tick);
+}
+function select(axis,layer){ const out=[]; for(const c of cubies){ const v=axis==='x'?c.position.x:axis==='y'?c.position.y:c.position.z; if(Math.round(v)===layer) out.push(c);} return out; }
+function rotate(axis,layer,sign,cb){ if(turning) return; const sel=select(axis,layer); const pivot=new THREE.Group(); cubeGroup.add(pivot); sel.forEach(c=>pivot.attach(c)); animateTo(pivot,AX[axis],0,sign*(Math.PI/2),sel,cb); }
+
+/* ===== CHANGED: swap B / B' here ===== */
+function parseMove(lbl){
+  const base = lbl.replace(/['2]/g,'');
+  const suf = lbl.slice(base.length);
+  let axis,layer,sign;
+  switch(base){
+    case 'R': axis='x'; layer=+1; sign=(suf==="'")?-1:+1; break;
+    case 'L': axis='x'; layer=-1; sign=(suf==="'")?+1:-1; break;
+    case 'U': axis='y'; layer=+1; sign=(suf==="'")?-1:+1; break;
+    case 'D': axis='y'; layer=-1; sign=(suf==="'")?+1:-1; break;
+    case 'F': axis='z'; layer=+1; sign=(suf==="'")?-1:+1; break;
+    case 'B': axis='z'; layer=-1; sign=(suf==="'")?+1:-1; break; /* flipped */
+    case 'M': axis='x'; layer=0;  sign=(suf==="'")?-1:+1; break;
+    case 'E': axis='y'; layer=0;  sign=(suf==="'")?-1:+1; break;
+    case 'S': axis='z'; layer=0;  sign=(suf==="'")?-1:+1; break;
+    default: return null;
+  }
+  if(base!=='M'&&base!=='E') sign*=-1;
+  const reps = (suf==='2')?2:1;
+  return {axis,layer,sign,reps};
+}
+// picker
+const labels=["R","R'","U","U'","F","F'","L","L'","D","D'","B","B'","M","M'","E","E'","S","S'"];
+const moveGrid=document.getElementById('moveGrid');
+labels.forEach(lbl=>{
+  const b=document.createElement('button'); b.className='btn-key'; b.textContent=lbl; b.addEventListener('click', ()=>{
+    const a=parseMove(lbl); if(!a) return; const go=(left)=>{ if(left<=0) return; rotate(a.axis,a.layer,a.sign, ()=>go(left-1)); }; go(a.reps);
+  }); moveGrid.appendChild(b);
+});
+
+// drag turning
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+const toNDC=e=>{ const r=canvas.getBoundingClientRect(); ndc.x=((e.clientX-r.left)/r.width)*2-1; ndc.y=-((e.clientY-r.top)/r.height)*2+1; };
+function pick(e){ toNDC(e); ray.setFromCamera(ndc,camera); const hit=ray.intersectObjects(cubeGroup.children,true)[0]; if(!hit) return null; let root=hit.object; while(root && root.parent!==cubeGroup) root=root.parent; const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,0,1).applyQuaternion(hit.object.getWorldQuaternion(new THREE.Quaternion())); return {cubie:root,normal:n.normalize()}; }
+const AXV={x:new THREE.Vector3(1,0,0),y:new THREE.Vector3(0,1,0),z:new THREE.Vector3(0,0,1)};
+function camBasis(){ const f=new THREE.Vector3(); camera.getWorldDirection(f); const r=new THREE.Vector3().crossVectors(f,camera.up).normalize().negate(); const u=new THREE.Vector3().crossVectors(r,f).normalize(); return {r,u}; }
+const drag={active:false,sx:0,sy:0,axis:null,layer:0,sel:[],pivot:null,plus:null,angle:0};
+
+/* === FIX #1 helper: robust drag reset to avoid null pivot crashes === */
+function resetDrag(){
+  drag.active = false;
+  drag.axis = null;
+  drag.layer = 0;
+  drag.sel = [];
+  drag.pivot = null;
+  drag.plus = null;
+  drag.angle = 0;
+}
+
+const AXIS_LOCK_PX2_FACE=6,AXIS_LOCK_PX2_SLICE=3,SNAP_FRAC_FACE=.10,SNAP_FRAC_SLICE=.08,HALF=.75;
+canvas.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse' && e.button!==0) return;
+  if(turning) return;
+  const info=pick(e); if(!info) return; drag.active=true; drag.sx=e.clientX; drag.sy=e.clientY; drag.axis=null;
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!drag.active||turning) return;
+  const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy,d2=dx*dx+dy*dy;
+  if(!drag.axis){
+    const n=pick(e)?.normal||new THREE.Vector3(0,0,1);
+    const cand=Math.abs(n.x)>0.8?['y','z']:Math.abs(n.y)>0.8?['x','z']:['x','y'];
+    const {r,u}=camBasis(); const v=new THREE.Vector3(0,0,0).addScaledVector(r,dx).addScaledVector(u,-dy).normalize();
+    let axis=cand[0],best=-1; for(const a of cand){ const s=Math.abs(v.dot(AXV[a])); if(s>best){best=s; axis=a;}}
+    const info2=pick(e); if(!info2) return;
+    const layerGuess = Math.max(-1,Math.min(1,Math.round(axis==='x'?info2.cubie.position.x:axis==='y'?info2.cubie.position.y:axis==='z'?info2.cubie.position.z:0)));
+    const need=(layerGuess===0?AXIS_LOCK_PX2_SLICE:AXIS_LOCK_PX2_FACE); if(d2<need) return;
+    drag.axis=axis; drag.layer=layerGuess; drag.sel=select(axis,layerGuess); drag.pivot=new THREE.Group(); cubeGroup.add(drag.pivot); drag.sel.forEach(c=>drag.pivot.attach(c));
+    drag.plus=new THREE.Vector3().crossVectors(n,AXV[axis]).normalize();
+  }
+  const {r,u}=camBasis(); const dragWorld=new THREE.Vector3(0,0,0).addScaledVector(r,dx).addScaledVector(u,-dy).normalize();
+  const s=dragWorld.dot(drag.plus); drag.angle=THREE.MathUtils.clamp(s*Math.PI,-3.2,3.2);
+  drag.pivot.setRotationFromAxisAngle(AXV[drag.axis], drag.angle); renderer.render(scene,camera);
+});
+
+/* === FIX #1: safer commit/cancel with guards + reset === */
+function commitOrCancel(){
+  // If drag never locked to an axis/pivot, just reset (prevents null pivot crash)
+  if(!drag.axis || !drag.pivot){
+    resetDrag();
+    return;
+  }
+  const q=Math.PI/2, h=Math.PI, a=Math.abs(drag.angle);
+  const frac=(drag.layer===0?SNAP_FRAC_SLICE:SNAP_FRAC_FACE);
+
+  if(a<q*frac){
+    // snap back
+    animateTo(drag.pivot, AXV[drag.axis], drag.angle, 0, drag.sel, ()=>resetDrag());
+  }else{
+    // snap to 90° or 180°
+    let reps, sign;
+    if(a>=Math.PI*HALF){ reps=2; sign=(drag.angle>0)?+1:-1; }
+    else{ reps=1; sign=(drag.angle>0)?+1:-1; }
+
+    const go=(left)=>{
+      if(left<=0){ resetDrag(); return; }
+      animateTo(
+        drag.pivot, AXV[drag.axis],
+        left===reps ? drag.angle : 0,
+        sign*(Math.PI/2),
+        drag.sel,
+        ()=>go(left-1)
+      );
+    };
+    go(reps);
+  }
+}
+
+// Release on canvas
+canvas.addEventListener('pointerup',()=>{ if(!drag.active) return; commitOrCancel(); });
+
+// === FIX #1: also catch releases that end off-canvas
+window.addEventListener('pointerup', ()=>{ if(drag.active) commitOrCancel(); });
+
+// === FIX #1: pointercancel guard when not locked
+canvas.addEventListener('pointercancel', ()=>{
+  if(!drag.active) return;
+  if(!drag.axis || !drag.pivot){ resetDrag(); return; }
+  animateTo(drag.pivot, AXV[drag.axis], drag.angle, 0, drag.sel, ()=>resetDrag());
+});
+
+/* ======== ADDED: state serialization helpers (for Daisy) ======== */
+function serializeState(){  // ADDED
+  return cubies.map(c=>({                   // ADDED
+    p:[c.position.x,c.position.y,c.position.z],                // ADDED
+    q:[c.quaternion.x,c.quaternion.y,c.quaternion.z,c.quaternion.w] // ADDED
+  }));                                                          // ADDED
+}                                                               // ADDED
+
+// Scramble @ fixed speed 31 — no text reveal
+const SCR_FACES=['U','D','L','R','F','B'], SCR_SUFFIX=['',"'",'2'];
+function genScramble(n=20){ const out=[]; let lastAxis=-1; while(out.length<n){ const f=SCR_FACES[(Math.random()*6)|0]; const axis=(f==='U'||f==='D')?0: (f==='L'||f==='R')?1:2; if((f==='U'||f==='D')?0:(f==='L'||f==='R')?1:2===lastAxis) continue; const s=SCR_SUFFIX[(Math.random()*3)|0]; out.push(f+s); lastAxis=(f==='U'||f==='D')?0:(f==='L'||f==='R')?1:2; } return out; }
+function parse(tok){ const base=tok.replace(/['2]/g,''), suf=tok.slice(base.length); let axis, layer, sign;
+  if(base==='R'){axis='x';layer=+1;sign=+1;} else if(base==='L'){axis='x';layer=-1;sign=-1;} else if(base==='U'){axis='y';layer=+1;sign=+1;}
+  else if(base==='D'){axis='y';layer=-1;sign=-1;} else if(base==='F'){axis='z';layer=+1;sign=+1;} else if(base==='B'){axis='z';layer=-1;sign=+1;} else return null; /* flipped */
+  if(suf==="'") sign*=-1; const reps=(suf==='2')?2:1; return {axis,layer,sign,reps};
+}
+/* CHANGED: playScramble now takes onDone and calls it when finished */
+function playScramble(seq, onDone){   /* CHANGED */
+  let i=0; function next(){ if(i>=seq.length){ onDone&&onDone(); return; }  /* CHANGED */
+    const a=parse(seq[i++]); const go=(left)=>{ if(left<=0) return next(); rotate(a.axis,a.layer,a.sign, ()=>go(left-1)); }; go(a.reps); }
+  next();
+}
+const btnScramble = document.getElementById('btn-scramble');
+function enableContinue(){
+  const btnContinue = document.getElementById('btn-continue');
+  const coachContinue = document.getElementById('coach-continue');
+  if(!btnContinue.disabled) return;
+  btnContinue.disabled = false;
+  btnContinue.removeAttribute('aria-disabled');
+  coachContinue.classList.remove('hidden');
+  positionCoaches();
+}
+/* CHANGED: unlock Continue AFTER scramble finishes + save scrambled state */
+btnScramble.addEventListener('click', ()=>{                    /* CHANGED */
+  const seq = genScramble(20);                                 /* CHANGED */
+  playScramble(seq, ()=>{                                      /* CHANGED */
+    localStorage.setItem('erno_scramble_state_v1', JSON.stringify(serializeState())); /* ADDED */
+    enableContinue();                                          /* CHANGED */
+    revealOnce('coach-continue');                              /* CHANGED */
+  });                                                          /* CHANGED */
+});
+
+// render loop
+(function loop(){ renderer.render(scene,camera); requestAnimationFrame(loop); })();
+
+/* ---------- Coach overlay placement ---------- */
+const coachScramble = document.getElementById('coach-scramble');
+const coachMoves = document.getElementById('coach-moves');
+const coachContinue = document.getElementById('coach-continue');
+const movePicker = document.getElementById('movePicker');
+const btnContinue = document.getElementById('btn-continue');
+
+function placeCoach(coachEl, targetEl, where){
+  if(!coachEl || !targetEl) return;
+  const r = targetEl.getBoundingClientRect();
+  const pad = 8;
+  // Default: center horizontally
+  let left = r.left + r.width/2;
+  let top = r.top;
+  if(where==='below'){ // arrow points up towards target; overlay sits just under the button
+    coachEl.classList.remove('down','left','right'); coachEl.classList.add('up');
+    top = r.bottom + 4;                      // closer so it's less "vertical"
+    left = r.left + r.width/2;
+    coachEl.style.transform = 'translate(-50%, 0)';
+  }else if(where==='above'){ // arrow points down towards target
+    coachEl.classList.remove('up','left','right'); coachEl.classList.add('down');
+    top = r.top - coachEl.offsetHeight - pad;
+    left = r.left + 16;
+    coachEl.style.transform = 'translate(0, 0)';
+  }else if(where==='right'){ // arrow points left towards target
+    coachEl.classList.remove('up','down','right'); coachEl.classList.add('left');
+    top = r.top + r.height/2 - coachEl.offsetHeight/2;
+    left = r.right + pad;
+    coachEl.style.transform = 'translate(0, 0)';
+  }else{ // left (arrow points right)
+    coachEl.classList.remove('up','down','left'); coachEl.classList.add('right');
+    top = r.top + r.height/2 - coachEl.offsetHeight/2;
+    left = r.left - coachEl.offsetWidth - pad;
+    coachEl.style.transform = 'translate(0, 0)';
+  }
+  coachEl.style.top = `${Math.max(8, top)}px`;
+  coachEl.style.left = `${Math.max(8, left)}px`;
+}
+
+function revealOnce(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.remove('hidden');
+  // hide after first interaction with the relevant control (optional UX)
+  if(id==='coach-scramble'){
+    const off=()=>{ el.classList.add('hidden'); btnScramble.removeEventListener('click',off); };
+    btnScramble.addEventListener('click',off,{once:true});
+  }
+  if(id==='coach-moves'){
+    const off=()=>{ el.classList.add('hidden'); movePicker.removeEventListener('click',off); };
+    movePicker.addEventListener('click',off,{once:true});
+  }
+}
+
+function positionCoaches(){
+  if(!coachScramble.classList.contains('hidden')) placeCoach(coachScramble, btnScramble, 'below');
+  if(!coachMoves.classList.contains('hidden')) placeCoach(coachMoves, movePicker, 'above');
+  // Continue caption: explicitly place BELOW the button; arrow sits ABOVE caption (fixed via markup)
+  if(!coachContinue.classList.contains('hidden')) placeCoach(coachContinue, btnContinue, 'below');
+}
+window.addEventListener('resize', positionCoaches);
+
+// Show the first two coaches on load
+revealOnce('coach-scramble');
+revealOnce('coach-moves');
+// Defer position until they have dimensions
+setTimeout(positionCoaches, 0);
+
+/* ---------- Continue button behavior ---------- */
+btnContinue.addEventListener('click', ()=>{                                       /* CHANGED */
+  // Save the exact state we're leaving with for Daisy to load                /* ADDED */
+  localStorage.setItem('erno_firststeps_leave_state_v1', JSON.stringify(serializeState())); /* ADDED */
+  // Small themed transition then go to Daisy                                 /* CHANGED (label only) */
+  document.body.appendChild(splash);
+  splash.querySelector('span').textContent = 'Starting Daisy…';                  /* CHANGED */
+  setTimeout(()=>{ location.href = 'tutorial-daisy.html'; }, 300);
+});
+})();
+</script>
+</body>
+</html>

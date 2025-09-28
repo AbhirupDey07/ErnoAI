@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Erno AI: Your Rubik's Cube Coach — Adaptive</title>
+  <style>
+    /* ===== Theme variables ===== */
+    :root{
+      --bg:#0b0c10; --panel:#121420; --ink:#e8eefc; --muted:#92a0b8; --line:#1b2133; --splashA:#11182a;
+      --card:#0d1222; --chip:#16213a; --chipBorder:#22325a; --btn:#16233e; --btnBorder:#22325a; --accent:#6ea8ff;
+      --asideW: 300px;
+      --persistH: 0px;
+    }
+
+    a{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:inherit;font-weight:500;color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline;filter:brightness(1.1)}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;display:grid;grid-template-columns:300px 1fr}
+
+    /* Splash */
+    #splash{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(1200px 800px at 50% 30%, var(--splashA) 0%, var(--bg) 60%);color:var(--ink);z-index:9999;transition:opacity .5s ease, visibility .5s ease}
+    #splash.hide{opacity:0;visibility:hidden}
+    #splash h1{margin:0;font-weight:800;letter-spacing:.2px;text-align:center}
+    #splash h1 span{display:block;opacity:.85;font-size:14px;margin-top:8px;font-weight:500}
+    #spinner{display:block;margin:14px auto 0;width:40px;height:40px;border-radius:50%;border:4px solid rgba(255,255,255,.18);border-top-color:var(--ink);animation:spin .9s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    aside{position:relative;height:100vh;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:12px 10px 14px}
+    main{position:relative;height:100vh}
+    #stage{position:absolute;inset:0}
+    canvas{display:block;width:100%;height:100%;touch-action:none}
+    h2{font-size:16px;margin:6px 0 8px}
+    .box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px}
+    #scramble{font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+    #moves{display:flex;flex-wrap:wrap;gap:6px;max-height:35vh;overflow:auto}
+    .badge{background:var(--chip);border:1px solid var(--chipBorder);border-radius:999px;padding:.35rem .6rem;font-weight:700}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    button{background:var(--btn);border:1px solid var(--btnBorder);color:var(--ink);border-radius:10px;padding:.55rem .8rem;font-weight:800;cursor:pointer}
+    button:hover{filter:brightness(1.07)}
+    .btn-mini{background:var(--btn);border:1px solid var(--btnBorder);color:var(--ink);border-radius:8px;padding:.25rem .5rem;font-weight:800;font-size:12px;cursor:pointer}
+    label small{color:var(--muted)}
+    .stat{display:flex;justify-content:space-between;gap:10px}
+    .stat b{font-size:13px}
+
+    /* Speed range */
+    input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;
+      background:linear-gradient(to right, var(--accent) 0 0) 0/var(--p,0%) 100% no-repeat, linear-gradient(to right, var(--btnBorder) 0 0);
+      border-radius:999px}
+    input[type="range"]::-webkit-slider-runnable-track{height:6px;background:transparent;border-radius:999px}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ink);border:2px solid var(--btnBorder);margin-top:-5px}
+    input[type="range"]::-moz-range-track{height:6px;background:var(--btnBorder);border:none;border-radius:999px}
+    input[type="range"]::-moz-range-progress{height:6px;background:var(--accent);border:none;border-radius:999px}
+    input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ink);border:2px solid var(--btnBorder)}
+
+    /* Title banner */
+    #brand{position:absolute;left:50%;top:12px;transform:translateX(-50%);font-weight:800;font-size:18px;color:var(--ink);
+      background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.4rem .6rem;backdrop-filter:blur(2px);pointer-events:none}
+
+    /* Buttons */
+    #btn-tutorial{position:absolute;right:56px;top:12px;z-index:20;background:var(--btn);border:1px solid var(--btnBorder);color:var(--ink);
+      border-radius:10px;padding:.55rem .8rem;font-weight:800;cursor:pointer}
+    #btn-settings{position:absolute;right:12px;top:12px;z-index:20;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.45rem .6rem;backdrop-filter:blur(2px)}
+    #btn-instructions{position:absolute;left:12px;top:-37px;z-index:20;background:var(--btn);border:1px solid var(--btnBorder);color:var(--ink);
+      border-radius:10px;padding:.55rem .8rem;font-weight:800;cursor:pointer}
+    #tips{position:absolute;left:12px;top:52px;z-index:20}
+
+    /* Persistent ticker */
+    #persistWrap{position:fixed;left:calc(var(--asideW,0px) + 12px);bottom:12px;max-width:480px;z-index:20;pointer-events:none}
+    #persist{pointer-events:auto;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px;box-shadow:0 10px 24px rgba(0,0,0,.35);backdrop-filter:blur(2px)}
+    #persist h3{margin:0 0 6px 0;font-size:13px;color:var(--ink)}
+    #persistMoves{display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow:auto}
+
+    /* Settings modal */
+    #settingsBackdrop[hidden]{display:none}
+    #settingsBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:grid;place-items:center;padding:20px}
+    #settingsPanel{width:min(900px,95vw);max-height:90vh;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);
+      border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.5);padding:14px}
+    .sp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .sp-head h3{margin:0;font-size:18px}
+    .sp-close{background:var(--btn);border:1px solid var(--btnBorder);border-radius:10px;padding:.4rem .6rem;cursor:pointer}
+    .sp-body{display:grid;grid-template-columns:180px 1fr;gap:12px}
+    .tabs{display:flex;flex-direction:column;gap:6px}
+    .tab{background:var(--card);border:1px solid var(--line);color:var(--ink);padding:.6rem .7rem;border-radius:10px;cursor:pointer;text-align:left}
+    .tab.active{outline:2px solid #2f4fb3}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px}
+    .themeGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+    .themeCard{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;height:64px;border-radius:10px;border:1px solid var(--line);overflow:hidden;cursor:pointer;position:relative}
+    .themeName{font-size:12px;margin-top:6px;opacity:.8}
+    .themeCard.selected{outline:2px solid #6ea8ff}
+    .sp-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    .btn-ghost{background:transparent;border:1px dashed var(--btnBorder);color:var(--ink)}
+
+    /* Move Picker (tighter, square-ish) */
+    #movePicker{
+      position:fixed;right:12px;bottom:calc(6px + var(--persistH,0px));
+      z-index:21;background:var(--card);color:var(--ink);
+      border:1px solid var(--line);border-radius:12px;padding:6px;
+      box-shadow:0 10px 24px rgba(0,0,0,.35);backdrop-filter:blur(2px);
+      display:block;
+      width:min(420px,92vw);
+    }
+    #movePicker h3{margin:0 0 4px 0;font-size:13px;font-weight:800;color:var(--ink);letter-spacing:.2px}
+    .keygrid{display:flex;flex-wrap:wrap;gap:6px}
+    .btn-key{
+      font-family:ui-monospace,Consolas,monospace;
+      padding:.7rem .65rem;
+      border-radius:10px;border:1px solid var(--btnBorder);background:var(--btn);color:var(--ink);
+      font-weight:800;cursor:pointer;font-size:13px;line-height:1;text-align:center;
+      flex:1 0 60px;
+    }
+    .btn-key:focus{outline:2px solid #2f4fb3;outline-offset:1px}
+
+    /* Horizontal-friendly picker on very small screens */
+    @media (max-width: 820px){
+      .keygrid{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+      #movePicker{width:92vw}
+    }
+
+    /* === Instructions modal (from index.html) === */
+    #instrBackdrop[hidden]{display:none}
+    #instrBackdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10000;
+      display:grid; place-items:center; padding:20px;
+    }
+    #instrPanel{
+      width:min(720px,95vw); max-height:90vh; overflow:auto;
+      background:var(--panel); color:var(--ink); border:1px solid var(--line);
+      border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.5); padding:14px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Splash -->
+  <div id="splash">
+    <div style="text-align:center">
+      <h1>Erno AI: Your Rubik's Cube Coach<span id="splash-sub">Loading assets…</span></h1>
+      <div id="spinner" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <aside>
+    <h2>Scramble</h2>
+    <div class="box" id="scramble">(none)</div>
+
+    <div class="row" style="margin-top:8px">
+      <button id="btn-gen">Generate</button>
+      <button id="btn-play">Play ▶</button>
+      <button id="btn-play-rev">Run Reverse ⏪</button>
+      <button id="btn-reset">Reset Cube</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="btn-pause">Pause ⏸</button>
+      <button id="btn-resume">Resume ⏵</button>
+      <button id="btn-step-back">Step Scramble ◀</button>
+      <button id="btn-step-fwd">Step Scramble ▶</button>
+    </div>
+
+    <h2 style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;">
+      Moves
+      <button id="btn-reset-moves-view" class="btn-mini" title="Clear only the Moves list (UI), keep cube/timer/analytics intact">Reset Moves (view only)</button>
+    </h2>
+    <div class="box" id="moves" aria-live="polite" aria-label="Move tracker"></div>
+    <div class="row" style="margin-top:8px">
+      <button id="btn-undo">Undo</button>
+      <button id="btn-redo">Redo</button>
+      <button id="btn-clear">Clear</button>
+    </div>
+
+    <h2 style="margin-top:14px">Speed & Metrics</h2>
+    <div class="box">
+      <label>Speed <small>(1–40)</small></label>
+      <input id="speed" type="range" min="1" max="40" value="16" />
+      <div class="row" style="margin-top:6px"><button id="btn-reset-timer">Reset Timer</button></div>
+      <div class="stat" style="margin-top:8px"><span>Moves</span><b id="m-moves">0</b></div>
+      <div class="stat"><span>Duration</span><b id="m-duration">0 ms</b></div>
+      <div class="stat"><span>TPS</span><b id="m-tps">0.00</b></div>
+      <div class="stat"><span>Total pause</span><b id="m-pause-total">0 ms</b></div>
+      <div class="stat"><span>Max pause</span><b id="m-pause-max">0 ms</b></div>
+    </div>
+  </aside>
+
+  <main>
+    <div id="stage"><canvas id="view"></canvas></div>
+    <div id="brand">Erno AI: Your Rubik's Cube Coach</div>
+    <button id="btn-tutorial" title="Interactive Tutorial"><u><b>I don’t know how to solve a Cube.</b></u></button>
+    <button id="btn-settings" title="Settings">⚙️</button>
+    <div id="tips"><button id="btn-instructions" title="Instructions">Instructions</button></div>
+
+    <div id="movePicker" role="group" aria-label="Move Picker">
+      <h3>Move Picker</h3>
+      <div id="moveGrid" class="keygrid"></div>
+    </div>
+  </main>
+
+  <!-- Persistent ticker -->
+  <div id="persistWrap">
+    <div id="persist">
+      <h3>Persistent Moves</h3>
+      <div id="persistMoves"></div>
+    </div>
+  </div>
+
+  <!-- Settings overlay -->
+  <div id="settingsBackdrop" hidden>
+    <div id="settingsPanel">
+      <div class="sp-head"><h3>Settings</h3><button class="sp-close" id="sp-close-top">✕</button></div>
+      <div class="sp-body">
+        <nav class="tabs">
+          <button class="tab active" id="tab-appearance">Appearance</button>
+          <button class="tab" id="tab-analytics">Analytics & Export</button>
+          <button class="tab" id="tab-bettercube">Enable LegacyCube</button>
+          <button class="tab" id="tab-functions">Function Descriptions</button>
+          <button class="tab" id="tab-credits">Credits</button>
+          <button class="tab" id="tab-contact">Contact</button>
+        </nav>
+
+        <section class="panel" id="panel-appearance">
+          <h4 style="margin:0 0 8px 0">Themes</h4>
+          <div id="themeGrid" class="themeGrid"></div>
+          <div class="sp-actions">
+            <button class="btn-ghost" id="btn-theme-default">Reset to Default</button>
+            <span style="flex:1"></span>
+            <button id="btn-cancel">Cancel</button>
+            <button id="btn-save-exit">Save & Exit</button>
+          </div>
+        </section>
+
+        <section class="panel" id="panel-analytics" hidden>
+          <h4 style="margin:0 0 8px 0">Session Notes</h4>
+          <p style="margin:6px 0 10px 0;color:var(--muted)">
+            Export a <b>.txt</b> notes file with theme, speed, canvas size, scramble, moves with timestamps, and key events.
+          </p>
+          <div class="row"><button id="btn-export-txt">Export Notes (.txt)</button></div>
+          <small style="display:block;margin-top:8px;color:var(--muted)">Includes session-relative ms and wall-clock ISO timestamps.</small>
+        </section>
+
+        <!-- UPDATED: BetterCube tab -->
+        <section class="panel" id="panel-bettercube" hidden>
+          <h4 style="margin:0 0 8px 0">BetterCube Model</h4>
+          <p style="margin:6px 0 10px 0">
+            <b>BetterCube is enabled.</b> This model <i>tracks whole-cube rotations</i> (x/y/z), <i>adapts face/slice labels</i> to your current view,
+            and <i>logs rotations explicitly</i> so notation matches what you see—closer to solving a real cube in hand.
+          </p>
+          <ul style="margin:0 0 10px 18px">
+            <li><b>Benefits:</b> View-relative notation that mirrors your camera—clockwise on screen reads as clockwise in the log, reducing mental gymnastics when practicing.</li>
+            <li>Rotation-aware move picker, so buttons always “mean what you see” after orbits and x/y/z spins (no second-guessing R vs. L after a view change).</li>
+            <li>Explicit x/y/z entries in logs make sessions reproducible and reviewable; exports tell the full story instead of hiding re-orientations.</li>
+            <li>Correct M/E/S slice parity under rotations; middle layers behave as you’d expect even after several whole-cube turns.</li>
+            <li>Undo/Redo are rotation-safe—reversals still invert the <i>actual</i> action you performed, not whatever the screen happens to face now.</li>
+          </ul>
+          <ul style="margin:8px 0 10px 18px">
+            <li><b>Trade-offs vs LegacyCube:</b> Steeper learning curve due to the addition of rotations and the requirement to consider for them while executing turns and certain algorithms</li>
+            <li>Logs are longer and noisier (rotations included). Great for fidelity, but less compact if you only care about face turns.</li>
+            <li>Slight performance overhead on low-end devices due to orientation bookkeeping (usually negligible, but measurable if you spam actions).</li>
+            <li>Rapid orbit + input spam can cause a one-frame mismatch while locks engage; guardrails drop extra clicks to keep the state consistent.</li>
+            <li>Some third-party timers/analyzers expect fixed-face notation; view-relative logs may not parse as you expect without conversion.</li>
+          </ul>
+          <div class="sp-actions">
+            <span style="flex:1"></span>
+            <button id="btn-disable-bcube" title="Switch to LegacyCube (standard fixed-face notation)">Enable LegacyCube</button>
+          </div>
+        </section>
+
+        <!-- UPDATED: Full Function Descriptions -->
+        <section class="panel" id="panel-functions" hidden>
+          <h4 style="margin:0 0 10px 0">What every control does (and caveats)</h4>
+          <h5>Scramble & Playback</h5>
+          <ul>
+            <li><b>Generate</b> — Creates a fresh 20-move scramble (doesn’t alter the cube immediately). Sets the base sequence for Play/Reverse/Step Scramble.</li>
+            <li><b>Play ▶</b> — Auto-runs the scramble from start to finish; each step is animated and logged to the Moves list.</li>
+            <li><b>Run Reverse ⏪</b> — Auto-runs the inverse of the current scramble; also logs to the Moves list.</li>
+            <li><b>Pause ⏸ / Resume ⏵</b> — Temporarily halt / continue auto-playback.</li>
+            <li><b>Reset Cube</b> — Returns the cube to solved state, <u>resets the camera to the original view</u>, and clears the Moves list (left column). The <i>Persistent Moves</i> ticker stays as a running log.</li>
+          </ul>
+          <h5>Step Scramble (independent)</h5>
+          <ul>
+            <li><b>Step Scramble ◀ / ▶</b> — Step through the scramble once, independently of the Moves list history. Backward steps use the scramble’s inverse; forward steps use the scramble as written. Indexes reset on new scramble or when playback finishes.</li>
+          </ul>
+          <h5>Moves panel</h5>
+          <ul>
+            <li><b>Moves list</b> — Every applied move (manual drag, picker, Play/Reverse, step) is appended as a badge.</li>
+            <li><b>Reset Moves (view only)</b> — Clears <i>only</i> the on-screen Moves list (leaves cube, timer, analytics, and the Persistent ticker untouched).</li>
+            <li><b>Undo</b> — Applies the inverse of the last logged move and removes that badge from <b>Moves</b>. <i>Persistent Moves logs the inverse move</i> so your session history stays complete. <u>Analytics update only for turns</u> (face/slice), not rotations.</li>
+            <li><b>Redo</b> — Re-applies the most-recent undone move from the Redo stack, logging it again to <b>Moves</b> <i>and</i> <b>Persistent Moves</b>. <u>Analytics update only for turns</u> (face/slice), not rotations. <b><u>Note that while using the BetterCube model, the undo/redo buttons will NOT undo a manual rotation, but it will still undo the correct faces.</u></b></li>
+            <li><b>Clear</b> — Clears the Moves list and timing metrics. Does <i>not</i> change the cube state.</li>
+          </ul>
+          <h5>Input</h5>
+          <ul>
+            <li><b>Drag a layer</b> — Click/touch a face and drag roughly perpendicular to lock that layer. Release to snap to 90°/180° or cancel if the drag was tiny.</li>
+            <li><b>Move Picker (bottom-right)</b> — Click any move (R/U/F/L/D/B and M/E/S, with primes/2). Picker moves are logged just like manual drags.</li>
+            <li><b>Orbit/Zoom</b> — Right-drag or <b>Shift + Left-drag</b> to orbit. Mouse wheel zooms.</li>
+          </ul>
+          <h5>Speed & Metrics</h5>
+          <ul>
+            <li><b>Speed</b> — Animation duration control (1–40). This is <i>not</i> recorded in Analytics.</li>
+            <li><b>Reset Timer</b> — Clears timing metrics (Moves/Duration/TPS/Pauses) only.</li>
+            <li><b>Metrics</b> — <b>Moves</b> (count), <b>Duration</b> (first→last move), <b>TPS</b>, <b>Total pause</b>, <b>Max pause</b>.</li>
+          </ul>
+          <h5>Analytics & Export</h5>
+          <ul>
+            <li><b>Export Notes (.txt)</b> — Human-readable dump of your session (meta, moves, events).</li>
+          </ul>
+          <h5>Appearance</h5>
+          <ul>
+            <li><b>Themes</b> — Click a theme card for live preview. <b>Save &amp; Exit</b> persists it; <b>Reset to Default</b> returns to the built-in “Midnight”.</li>
+          </ul>
+          <h5>Persistent Moves</h5>
+          <ul>
+            <li>The bottom-left “Persistent Moves” ticker keeps a running log across actions like Reset Cube or view-only resets, <b>and now includes undo/redo</b>, so you can reference the full session.</li>
+          </ul>
+          <h5>BetterCube vs LegacyCube (summary)</h5>
+          <ul>
+            <li><b>BetterCube</b> — Tracks rotations (x/y/z), adapts move labels to view, logs rotations, simulating IRL solving.</li>
+            <li><b>LegacyCube</b> — No rotation tracking; fixed R/L/U/D/F/B mapping always. Simpler, shorter logs.</li>
+          </ul>
+          <h5>Other tabs</h5>
+          <ul>
+            <li><b>Credits</b> — Project attribution and author.</li>
+            <li><b>Contact</b> — Where to report issues or reach the project.</li>
+          </ul>
+          <h5>Notes & caveats</h5>
+          <ul>
+            <li>Interactions are guard-railed during animations; rapid clicks while a layer is turning will be ignored.</li>
+            <li>Overloading (e.g., Play + Reverse + speed changes spam) can lead to unexpected sequencing; finish one action before starting the next for best results.</li>
+            <li>Orientation detail: for slice moves, M/E/S use native sign; face moves are adjusted so a visible clockwise turn reads without a prime.</li>
+          </ul>
+        </section>
+
+        <section class="panel" id="panel-credits" hidden>
+          <h4 style="margin:0 0 8px 0">Credits</h4>
+          <p style="margin:6px 0 10px 0">Created by <b>Abhirup Dey</b></p>
+          <ul style="margin:0 0 6px 18px">
+            <li>Email: <a href="mailto:deyabhirup07@gmail.com">deyabhirup07@gmail.com</a></li>
+            <li>Email: <a href="mailto:adey68@gatech.edu">adey68@gatech.edu</a></li>
+          </ul>
+        </section>
+
+        <section class="panel" id="panel-contact" hidden>
+          <h4 style="margin:0 0 8px 0">Contact</h4>
+          <p style="margin:6px 0 0 0">For site issues, contact: <a href="mailto:ernoaiproject@gmail.com">ernoaiproject@gmail.com</a></p>
+        </section>
+      </div>
+      <div class="sp-actions"><button class="sp-close" id="sp-close-bottom">Close</button></div>
+    </div>
+  </div>
+
+  <!-- Instructions modal (from index.html) -->
+  <div id="instrBackdrop" hidden>
+    <div id="instrPanel">
+      <div class="sp-head"><h3>Instructions</h3><button class="sp-close" id="instr-close-top">✕</button></div>
+      <section class="panel" style="margin:0">
+        <div style="font-size:13px;line-height:1.35">
+          <p><b>Use the mouse (or one finger) to drag cube layers.</b></p>
+          <p>For best control, begin the drag roughly <em>perpendicular</em> to the target face to lock that layer—this applies to middle slices (<b>M/E/S</b>) as well.</p>
+          <p>Right-drag or <b>Shift + Left-drag</b> orbits; the mouse wheel zooms.</p>
+          <p>You may also use the <b>Move Picker Keyboard</b> on the bottom right of the screen if dragging is too difficult.</p>
+          <p>Note: Some things may not operate properly if overloaded. For example, executing Play + Run Reverse multiple times in a row and simultaneously changing the speed may not lead to <b>expected results.</b></p>
+          <p>For more information on function specifics, consult the <b>Function Descriptions</b> tab within Settings.</p>
+          <p>This is just the beginning, have fun :3</p>
+          <p><b>THIS APPLICATION IS A WORK IN PROGRESS</b></p>
+        </div>
+      </section>
+      <div class="sp-actions">
+        <span style="flex:1"></span>
+        <button id="instr-open-functions" title="Open Function Descriptions">Function Descriptions</button>
+        <button class="sp-close" id="instr-close-bottom">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script>
+  (() => {
+    /* ---------- Splash ---------- */
+    const splash=document.getElementById('splash'), splashSub=document.getElementById('splash-sub');
+    const showSplash=(msg="Loading assets…")=>{ splashSub.textContent=msg; splash.classList.remove('hide'); };
+    const hideSplash=()=>splash.classList.add('hide');
+    window.addEventListener('load',()=>{ setTimeout(()=>hideSplash(),700); setTimeout(()=>{ if(splash.isConnected) splash.remove(); },1500); });
+
+    /* ---------- Theme (FULL list) ---------- */
+    const STORAGE_KEY='erno_theme_v1'; const rootStyle=document.documentElement.style;
+    const THEMES={
+      default:{name:'Midnight (Default)',v:{bg:'#0b0c10',panel:'#121420',ink:'#e8eefc',muted:'#92a0b8',line:'#1b2133',splashA:'#11182a'}},
+      cream:{name:'Cream',v:{bg:'#f4efe6',panel:'#fffaf2',ink:'#2c2a25',muted:'#6b665b',line:'#e1d9c9',splashA:'#efe7d8'}},
+      caramel:{name:'Caramel',v:{bg:'#2a1f1a',panel:'#3b2b22',ink:'#f8e9d4',muted:'#d9c2a8',line:'#4c3a30',splashA:'#3a2a22'}},
+      cyber:{name:'Cyber',v:{bg:'#0a0f0a',panel:'#0f1510',ink:'#d5ffd5',muted:'#90c990',line:'#183018',splashA:'#0f1c10'}},
+      nord:{name:'Nord',v:{bg:'#2e3440',panel:'#3b4252',ink:'#eceff4',muted:'#c0c8d5',line:'#4c566a',splashA:'#323a49'}},
+      dracula:{name:'Dracula',v:{bg:'#282a36',panel:'#1e2029',ink:'#f8f8f2',muted:'#b6b6c1',line:'#3b3e4b',splashA:'#2f3140'}},
+      solarDark:{name:'Solarized Dark',v:{bg:'#002b36',panel:'#073642',ink:'#eee8d5',muted:'#93a11',line:'#0b3a46',splashA:'#03313c'}},
+      solarLight:{name:'Solarized Light',v:{bg:'#fdf6e3',panel:'#f5efd9',ink:'#073642',muted:'#657b83',line:'#e6dec4',splashA:'#efe8d2'}},
+      catMocha:{name:'Catppuccin Mocha',v:{bg:'#1e1e2e',panel:'#242437',ink:'#cdd6f4',muted:'#a6adc8',line:'#313244',splashA:'#23233a'}},
+      gruvDark:{name:'Gruvbox Dark',v:{bg:'#1d2021',panel:'#282828',ink:'#ebdbb2',muted:'#d5c4a1',line:'#3c3836',splashA:'#232524'}},
+      gruvLight:{name:'Gruvbox Light',v:{bg:'#fbf1c7',panel:'#f2e5bc',ink:'#3c3836',muted:'#7c6f64',line:'#e0d2a4',splashA:'#f5e8bf'}},
+      oneDark:{name:'One Dark',v:{bg:'#21252b',panel:'#282c34',ink:'#e6efff',muted:'#a0afc1',line:'#323844',splashA:'#252a31'}},
+      synthwave:{name:'Synthwave',v:{bg:'#1b1227',panel:'#231833',ink:'#fedaff',muted:'#d7b6ff',line:'#3a2857',splashA:'#23173a'}},
+      monokai:{name:'Monokai',v:{bg:'#272822',panel:'#2e2f27',ink:'#f8f8f2',muted:'#c2c2b4',line:'#3b3c34',splashA:'#2c2d26'}},
+      mint:{name:'Mint',v:{bg:'#0e1412',panel:'#111a16',ink:'#d9fff2',muted:'#9de5cf',line:'#173026',splashA:'#15231e'}},
+      rosePine:{name:'Rosé Pine',v:{bg:'#191724',panel:'#1f1d2e',ink:'#e0def4',muted:'#908caa',line:'#2a2837',splashA:'#201e2f'}},
+      highContrast:{name:'High Contrast',v:{bg:'#000000',panel:'#0a0a0a',ink:'#ffffff',muted:'#bfbfbf',line:'#222',splashA:'#101010'}},
+      mono:{name:'Monochrome',v:{bg:'#111114',panel:'#16171a',ink:'#f1f2f5',muted:'#a9acb3',line:'#272a33',splashA:'#1b1c20'}}
+    };
+    function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return{r:(n>>16)&255,g:(n>>8)&255,b:n&255}}
+    function rgbToHex({r,g,b}){const n=(r<<16)|(g<<8)|b;return'#'+n.toString(16).padStart(6,'0')}
+    function mix(a,b,t){const A=hexToRgb(a),B=hexToRgb(b);return rgbToHex({r:Math.round(A.r+(B.r-A.r)*t),g:Math.round(A.g+(B.g-A.g)*t),b:Math.round(A.b+(B.b-A.b)*t)})}
+    function applyThemeVars(v){
+      const card=mix(v.panel,v.bg,.15), chip=mix(v.panel,v.line,.35), chipBorder=mix(v.line,v.panel,.4), btn=mix(v.panel,v.line,.25), btnBorder=mix(v.line,v.panel,.25), splashA=v.splashA||v.panel, accent=mix(v.ink,v.panel,.2);
+      rootStyle.setProperty('--bg',v.bg);rootStyle.setProperty('--panel',v.panel);rootStyle.setProperty('--ink',v.ink);rootStyle.setProperty('--muted',v.muted);rootStyle.setProperty('--line',v.line);rootStyle.setProperty('--splashA',splashA);rootStyle.setProperty('--card',card);rootStyle.setProperty('--chip',chip);rootStyle.setProperty('--chipBorder',chipBorder);rootStyle.setProperty('--btn',btn);rootStyle.setProperty('--btnBorder',btnBorder);rootStyle.setProperty('--accent',accent);
+    }
+    function applyThemeById(id){const t=THEMES[id]||THEMES.default;applyThemeVars(t.v)}
+    function saveThemeId(id){localStorage.setItem(STORAGE_KEY,id)}
+    function loadThemeId(){return localStorage.getItem(STORAGE_KEY)||'default'}
+    const themeGrid=document.getElementById('themeGrid'); let selectedId=loadThemeId(); applyThemeById(selectedId);
+    function card(id,t){const wrap=document.createElement('div');const c=document.createElement('div');c.className='themeCard';const sw=color=>{const d=document.createElement('div');d.style.background=color;return d};const v=t.v;c.append(sw(v.bg),sw(v.panel),sw(v.ink),sw(v.line));if(id===selectedId)c.classList.add('selected');c.addEventListener('click',()=>{selectedId=id;document.querySelectorAll('.themeCard').forEach(el=>el.classList.remove('selected'));c.classList.add('selected');applyThemeVars(v)});const nm=document.createElement('div');nm.className='themeName';nm.textContent=t.name;wrap.append(c,nm);return wrap}
+    function rebuild(){themeGrid.innerHTML='';Object.entries(THEMES).forEach(([id,t])=>themeGrid.appendChild(card(id,t)))} rebuild();
+    const settingsBackdrop=document.getElementById('settingsBackdrop');
+    const tabs={
+      appearance:document.getElementById('tab-appearance'),
+      analytics:document.getElementById('tab-analytics'),
+      bettercube:document.getElementById('tab-bettercube'),
+      functions:document.getElementById('tab-functions'),
+      credits:document.getElementById('tab-credits'),
+      contact:document.getElementById('tab-contact')
+    };
+    const panels={
+      appearance:document.getElementById('panel-appearance'),
+      analytics:document.getElementById('panel-analytics'),
+      bettercube:document.getElementById('panel-bettercube'),
+      functions:document.getElementById('panel-functions'),
+      credits:document.getElementById('panel-credits'),
+      contact:document.getElementById('panel-contact')
+    };
+    function setTab(which){Object.values(tabs).forEach(t=>t&&t.classList.remove('active'));Object.values(panels).forEach(p=>p&&(p.hidden=true));tabs[which].classList.add('active');panels[which].hidden=false}
+    tabs.appearance.addEventListener('click',()=>setTab('appearance'));
+    tabs.analytics.addEventListener('click',()=>setTab('analytics'));
+    tabs.bettercube.addEventListener('click',()=>setTab('bettercube'));
+    tabs.functions.addEventListener('click',()=>setTab('functions'));
+    tabs.credits.addEventListener('click',()=>setTab('credits'));
+    tabs.contact.addEventListener('click',()=>setTab('contact'));
+    document.getElementById('btn-settings').addEventListener('click',()=>{selectedId=loadThemeId();applyThemeById(selectedId);rebuild();settingsBackdrop.hidden=false});
+    [document.getElementById('sp-close-top'),document.getElementById('sp-close-bottom'),document.getElementById('btn-cancel')].forEach(b=>b&&b.addEventListener('click',()=>{applyThemeById(loadThemeId());settingsBackdrop.hidden=true}));
+    document.getElementById('btn-theme-default').addEventListener('click',()=>{selectedId='default';applyThemeById(selectedId);rebuild()});
+    document.getElementById('btn-save-exit').addEventListener('click',()=>{saveThemeId(selectedId);applyThemeById(selectedId);settingsBackdrop.hidden=true;if(!splash.isConnected)document.body.appendChild(splash);showSplash('Applying theme…');setTimeout(()=>hideSplash(),800)});
+
+    /* Instructions modal wiring (from index.html) */
+    const instrBackdrop=document.getElementById('instrBackdrop');
+    document.getElementById('btn-instructions').addEventListener('click',()=>{instrBackdrop.hidden=false});
+    ['instr-close-top','instr-close-bottom'].forEach(id=>{const el=document.getElementById(id);el&&el.addEventListener('click',()=>{instrBackdrop.hidden=true})});
+    document.getElementById('instr-open-functions').addEventListener('click',()=>{instrBackdrop.hidden=true;selectedId=loadThemeId();applyThemeById(selectedId);rebuild();settingsBackdrop.hidden=false;setTab('functions')});
+
+    /* BetterCube switch: CLOSE settings immediately, then show splash captions and redirect */
+    const btnDisableBC=document.getElementById('btn-disable-bcube');
+    if(btnDisableBC){
+      btnDisableBC.addEventListener('click',()=>{
+        settingsBackdrop.hidden = true;
+        if(!splash.isConnected) document.body.appendChild(splash);
+        showSplash('Disabling BetterCube, enabling LegacyCube…');
+        setTimeout(()=>{ showSplash('Loading assets…'); setTimeout(()=>{ window.location.href='index.html'; }, 550); }, 550);
+      });
+    }
+
+    /* ---------- Layout sync ---------- */
+    const asideEl=document.querySelector('aside'); const persistEl=document.getElementById('persist');
+    function updateLayoutVars(){
+      const aw=asideEl?Math.round(asideEl.getBoundingClientRect().width):0;
+      document.documentElement.style.setProperty('--asideW', aw+'px');
+      const ph=persistEl?Math.round(persistEl.getBoundingClientRect().height):0;
+      document.documentElement.style.setProperty('--persistH', (ph+8)+'px');
+    }
+    const roLayout=new ResizeObserver(updateLayoutVars);
+    roLayout.observe(document.documentElement); if(asideEl) roLayout.observe(asideEl); if(persistEl) roLayout.observe(persistEl);
+    window.addEventListener('load', updateLayoutVars); updateLayoutVars();
+
+    /* ---------- Scene ---------- */
+    const canvas=document.getElementById('view');
+    const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    const scene=new THREE.Scene();
+    const camera=new THREE.PerspectiveCamera(50,1,.1,1000);
+    const CAM_INIT_POS=new THREE.Vector3(5.2,4.7,6.1), CAM_TARGET=new THREE.Vector3(0,0,0);
+    function resetView(){camera.up.set(0,1,0); camera.position.copy(CAM_INIT_POS); camera.lookAt(CAM_TARGET)}
+    resetView();
+    scene.add(new THREE.AmbientLight(0xffffff,.6)); const key=new THREE.DirectionalLight(0xffffff,.9); key.position.set(3,6,7); scene.add(key);
+    const stage=document.getElementById('stage');
+    new ResizeObserver(()=>{const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}).observe(stage);
+
+    /* Subtle grid cube */
+    (function makeGridCube(size=600,divisions=120,color=0x223355,opacity=0.07){
+      const mk=()=>{const gh=new THREE.GridHelper(size,divisions,color,color);gh.material.transparent=true;gh.material.opacity=opacity;return gh};
+      const g=new THREE.Group(), xz1=mk(), xz2=mk(), xy1=mk(), xy2=mk(), yz1=mk(), yz2=mk();
+      xz1.position.y= size/2; xz2.position.y=-size/2; xy1.rotation.x=Math.PI/2; xy1.position.z= size/2; xy2.rotation.x=Math.PI/2; xy2.position.z=-size/2; yz1.rotation.z=Math.PI/2; yz1.position.x= size/2; yz2.rotation.z=Math.PI/2; yz2.position.x=-size/2;
+      g.add(xz1,xz2,xy1,xy2,yz1,yz2); scene.add(g);
+    })();
+
+    /* ---------- Cube ---------- */
+    const cubeGroup=new THREE.Group(); scene.add(cubeGroup);
+    const CELL=1, STICKER=.92, GAP=.04; let cubies=[];
+    /* SWAPPED RED/ORANGE (visual only) */
+    const COLORS={U:0xffd500,D:0xffffff,L:0xcc0000,R:0xff8c1a,F:0x00a040,B:0x0040cc};
+    function mkCubie(i,j,k){
+      const core=new THREE.Mesh(new THREE.BoxGeometry(STICKER,STICKER,STICKER), new THREE.MeshStandardMaterial({color:0x111317,roughness:.9}));
+      const g=new THREE.Group(); g.add(core); g.position.set(i*CELL,j*CELL,k*CELL);
+      const faces=[
+        {k:'R',show:i=== 1,n:new THREE.Vector3( 1,0,0)},
+        {k:'L',show:i===-1,n:new THREE.Vector3(-1,0,0)},
+        {k:'U',show:j=== 1,n:new THREE.Vector3( 0,1,0)},
+        {k:'D',show:j===-1,n:new THREE.Vector3( 0,-1,0)},
+        {k:'F',show:k=== 1,n:new THREE.Vector3( 0,0,1)},
+        {k:'B',show:k===-1,n:new THREE.Vector3( 0,0,-1)}
+      ];
+      const pg=new THREE.PlaneGeometry(STICKER-GAP,STICKER-GAP);
+      faces.forEach(f=>{if(!f.show)return; const s=new THREE.Mesh(pg,new THREE.MeshBasicMaterial({color:COLORS[f.k]})); s.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),f.n); s.position.copy(f.n).multiplyScalar(STICKER/2+0.001); g.add(s);});
+      cubeGroup.add(g); cubies.push(g);
+    }
+    function buildSolved(){cubies.length=0; cubeGroup.clear(); for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)for(let k=-1;k<=1;k++) mkCubie(i,j,k)} buildSolved();
+
+    /* ---------- Orbit ---------- */
+    const AX={x:new THREE.Vector3(1,0,0), y:new THREE.Vector3(0,1,0), z:new THREE.Vector3(0,0,1)};
+    let orbit=false, px=0, py=0;
+    canvas.addEventListener('contextmenu',e=>e.preventDefault());
+    canvas.addEventListener('pointerdown',e=>{ if(e.pointerType==='mouse'){ if(e.button===2||(e.button===0 && e.shiftKey)){orbit=true;px=e.clientX;py=e.clientY;} }});
+    ['pointerup','pointerleave'].forEach(t=>canvas.addEventListener(t,()=>orbit=false));
+    function orbitStep(dx,dy){
+      const sp=0.005, target=CAM_TARGET.clone();
+      const f=new THREE.Vector3(); camera.getWorldDirection(f);
+      const worldUp=new THREE.Vector3(0,1,0);
+      const qYaw=new THREE.Quaternion().setFromAxisAngle(worldUp, -dx*sp);
+      const rightV=new THREE.Vector3().crossVectors(f,camera.up).normalize();
+      const safeRight = rightV.lengthSq()>1e-8 ? rightV : new THREE.Vector3(1,0,0);
+      const qPitch=new THREE.Quaternion().setFromAxisAngle(safeRight, -dy*sp);
+      const q=new THREE.Quaternion().multiply(qYaw).multiply(qPitch);
+      const off=camera.position.clone().sub(target).applyQuaternion(q);
+      camera.up.applyQuaternion(q);
+      camera.position.copy(target.add(off));
+      camera.lookAt(CAM_TARGET);
+    }
+    canvas.addEventListener('pointermove',e=>{ if(e.pointerType==='mouse'){ if(!orbit) return; const dx=e.clientX-px,dy=e.clientY-py; px=e.clientX; py=e.clientY; orbitStep(dx,dy); renderer.render(scene,camera); }});
+    window.addEventListener('wheel',e=>{ camera.position.multiplyScalar(1+Math.sign(e.deltaY)*.08).clampLength(4,40); },{passive:true});
+
+    /* touch two-finger orbit */
+    const touches=new Map(); const tOrbit={active:false,cx:0,cy:0};
+    function centroid(){ let sx=0,sy=0;for(const p of touches.values()){sx+=p.x;sy+=p.y}const n=Math.max(1,touches.size);return{x:sx/n,y:sy/n} }
+    canvas.addEventListener('pointerdown',e=>{ if(e.pointerType!=='touch')return; touches.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(touches.size===2){ if(drag.active && drag.pivot){ animateTo(drag.pivot,AX[drag.axis],drag.angle,0,drag.sel,()=>{ resetDrag(); }); } const c=centroid(); tOrbit.active=true; tOrbit.cx=c.x; tOrbit.cy=c.y; } },{passive:true});
+    canvas.addEventListener('pointermove',e=>{ if(e.pointerType!=='touch')return; const prev=touches.get(e.pointerId); if(prev){prev.x=e.clientX;prev.y=e.clientY} if(tOrbit.active){ const c=centroid(); const dx=c.x-tOrbit.cx, dy=c.y-tOrbit.cy; tOrbit.cx=c.x; tOrbit.cy=c.y; orbitStep(dx,dy); renderer.render(scene,camera); } },{passive:true});
+    ['pointerup','pointercancel','pointerleave'].forEach(t=>canvas.addEventListener(t,e=>{ if(e.pointerType!=='touch')return; touches.delete(e.pointerId); if(touches.size<2) tOrbit.active=false; }));
+
+    /* ---------- Picking helpers ---------- */
+    const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+    const toNDC=e=>{ const r=canvas.getBoundingClientRect(); ndc.x=((e.clientX-r.left)/r.width)*2-1; ndc.y=-((e.clientY-r.top)/r.height)*2+1; };
+    function camBasis(){ const f=new THREE.Vector3(); camera.getWorldDirection(f).normalize(); const r=new THREE.Vector3().crossVectors(f,camera.up).normalize(); const u=new THREE.Vector3().crossVectors(r,f).normalize(); return {f,r,u}; }
+    function pick(e){ toNDC(e); ray.setFromCamera(ndc,camera); const hit=ray.intersectObjects(cubeGroup.children,true)[0]; if(!hit) return null; let root=hit.object; while(root && root.parent!==cubeGroup) root=root.parent; const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,0,1).applyQuaternion(hit.object.getWorldQuaternion(new THREE.Quaternion())); return {cubie:root,normal:n.normalize()}; }
+    const layerIndex=(cubie,axis)=>{ const p=cubie.position; const v=axis==='x'?p.x:axis==='y'?p.y:p.z; return Math.max(-1,Math.min(1,Math.round(v))); };
+
+    /* ---------- Adaptive mapping (faces) ---------- */
+    function majorAxis(v){ const ax=Math.abs(v.x),ay=Math.abs(v.y),az=Math.abs(v.z); if(ax>=ay && ax>=az) return {axis:'x', sgn:v.x>=0?+1:-1}; if(ay>=ax && ay>=az) return {axis:'y', sgn:v.y>=0?+1:-1}; return {axis:'z', sgn:v.z>=0?+1:-1}; }
+    function viewMapping(){
+      const {f,r,u}=camBasis();
+      const Rm=majorAxis(r), Um=majorAxis(u), Fm=majorAxis(new THREE.Vector3(-f.x,-f.y,-f.z));
+      const map={
+        R:{axis:Rm.axis, layer:Rm.sgn>0?+1:-1, sgn:Rm.sgn}, L:{axis:Rm.axis, layer:Rm.sgn>0?-1:+1, sgn:-Rm.sgn},
+        U:{axis:Um.axis, layer:Um.sgn>0?+1:-1, sgn:Um.sgn}, D:{axis:Um.axis, layer:Um.sgn>0?-1:+1, sgn:-Um.sgn},
+        F:{axis:Fm.axis, layer:Fm.sgn>0?+1:-1, sgn:Fm.sgn}, B:{axis:Fm.axis, layer:Fm.sgn>0?-1:+1, sgn:-Fm.sgn}
+      };
+      map.M={axis:map.R.axis, layer:0, sgn:map.L.sgn};
+      map.E={axis:map.U.axis, layer:0, sgn:map.D.sgn};
+      map.S={axis:map.F.axis, layer:0, sgn:map.F.sgn};
+      return map;
+    }
+    function labelFromAction(axis,layer,sign,reps=1){
+      const m=viewMapping();
+      const matchFace=(axis,layer)=>{
+        const letters=['R','L','U','D','F','B'];
+        for(const L of letters){ const e=m[L]; if(e.axis===axis && e.layer===layer) return L; }
+        if(layer===0){ if(m.R.axis===axis) return 'M'; if(m.U.axis===axis) return 'E'; if(m.F.axis===axis) return 'S'; }
+        return axis==='x'?(layer>0?'R':layer<0?'L':'M'):axis==='y'?(layer>0?'U':layer<0?'D':'E'):(layer>0?'F':layer<0?'B':'S');
+      };
+      const letter=matchFace(axis,layer), entry=m[letter], isSlice=(letter==='M'||letter==='E'||letter==='S');
+      let cw=isSlice ? (sign=== entry.sgn) : (sign===-entry.sgn);
+      if(letter==='E'||letter==='S'||letter==='M') cw=!cw; /* flip M/E/S sense */
+      const suf=reps===2?'2':(cw?'':"'"); return letter+suf;
+    }
+    function moveToAction(letter,suffix){
+      const M=viewMapping()[letter];
+      let reps=1, cw=true;
+      if(suffix==="2"){ reps=2; cw=true; }
+      else if(suffix=="'"){ cw=false; }
+      if(letter==='E'||letter==='S'||letter==='M') cw=!cw; /* flip M/E/S sense */
+      const isSlice=(letter==='M'||letter==='E'||letter==='S');
+      const sign=isSlice ? (cw?+M.sgn:-M.sgn) : (cw?-M.sgn:+M.sgn);
+      return {axis:M.axis, layer:M.layer, sign, reps, isWhole:false, label: letter + (suffix||''), countForMetrics:true};
+    }
+
+    /* ---------- Orientation basis for x/y/z (LOCAL→WORLD) ---------- */
+    let ORI = { x:{axis:'x', sgn:+1}, y:{axis:'y', sgn:+1}, z:{axis:'z', sgn:+1} };
+    let prevDisc = null;
+    function resetOrientation(){ ORI = { x:{axis:'x', sgn:+1}, y:{axis:'y', sgn:+1}, z:{axis:'z', sgn:+1} }; prevDisc=null; }
+    function cloneDir(d){ return {axis:d.axis, sgn:d.sgn}; }
+    function worldForLocal(local){ return ORI[local]; }
+    function rotateOriLocal(local, sign){
+      if(local==='x'){
+        const Y=cloneDir(ORI.y), Z=cloneDir(ORI.z);
+        if(sign>0){ ORI.y = Z; ORI.z = {axis:Y.axis, sgn:-Y.sgn}; }
+        else      { ORI.y = {axis:Z.axis, sgn:-Z.sgn}; ORI.z = Y; }
+      }else if(local==='y'){
+        const Z=cloneDir(ORI.z), X=cloneDir(ORI.x);
+        if(sign>0){ ORI.z = X; ORI.x = {axis:Z.axis, sgn:-Z.sgn}; }
+        else      { ORI.z = {axis:X.axis, sgn:-X.sgn}; ORI.x = Z; }
+      }else if(local==='z'){
+        const X=cloneDir(ORI.x), Y=cloneDir(ORI.y);
+        if(sign>0){ ORI.x = Y; ORI.y = {axis:X.axis, sgn:-X.sgn}; }
+        else      { ORI.x = {axis:Y.axis, sgn:-Y.sgn}; ORI.y = X; }
+      }
+    }
+
+    /* ---------- Metrics & logs ---------- */
+    const movesBox=document.getElementById('moves'), persistBox=document.getElementById('persistMoves');
+    function mkBadge(txt){const s=document.createElement('span'); s.className='badge'; s.textContent=txt; return s}
+    function addBadgeBoth(txt){movesBox.appendChild(mkBadge(txt));persistBox.appendChild(mkBadge(txt));movesBox.scrollTop=movesBox.scrollHeight;persistBox.scrollTop=persistBox.scrollHeight}
+    function addBadgeMoves(txt){movesBox.appendChild(mkBadge(txt));movesBox.scrollTop=movesBox.scrollHeight}
+    const metrics={movesEl:document.getElementById('m-moves'),durEl:document.getElementById('m-duration'),tpsEl:document.getElementById('m-tps'),pauseTotEl:document.getElementById('m-pause-total'),pauseMaxEl:document.getElementById('m-pause-max')};
+    const fmtMs=n=>n<=0?'0 ms':(n<1000?`${Math.round(n)} ms`:`${(n/1000).toFixed(2)} s`);
+    const events=[]; function logEvent(type,data={}){events.push({type,at:Date.now(),...data});}
+
+    const rec={list:[],curStart:0,wallStart:0,armed:false,
+      begin(){this.curStart=performance.now();this.wallStart=Date.now();this.armed=true},
+      end(label,countForMetrics=true){const now=performance.now(),nowWall=Date.now();const tStart=this.armed?(this.curStart||now):now;const wStart=this.armed?(this.wallStart||nowWall):nowWall;this.list.push({tStart,tEnd:now,wallStart:wStart,wallEnd:nowWall,label,countForMetrics});this.armed=false;updateMetrics()},
+      abort(){this.armed=false}, resetTimer(){this.list.length=0;this.curStart=0;this.armed=false;updateMetrics()}, clear(){this.list.length=0;this.curStart=0;this.armed=false;updateMetrics()}
+    };
+    function updateMetrics(){
+      const L = rec.list.filter(m => m.countForMetrics !== false);
+      const n = L.length;
+      let dur=0,pauseTot=0,pauseMax=0;
+      if(n){
+        dur=Math.max(0,L[n-1].tEnd-L[0].tStart);
+        for(let i=1;i<n;i++){ const p=Math.max(0,L[i].tStart-L[i-1].tEnd); pauseTot+=p; if(p>pauseMax) pauseMax=p; }
+      }
+      const tps=(n>1&&dur>0)?(n-1)/(dur/1000):0;
+      metrics.movesEl.textContent=n; metrics.durEl.textContent=fmtMs(dur); metrics.tpsEl.textContent=tps.toFixed(2);
+      metrics.pauseTotEl.textContent=fmtMs(pauseTot); metrics.pauseMaxEl.textContent=fmtMs(pauseMax);
+    }
+
+    /* ---------- Animation core ---------- */
+    let turning=false, busyUntil=0; const COOLDOWN_MS=20;
+    const isBusy=()=>turning || performance.now()<busyUntil;
+    function bakeFromPivot(pivot,sel){pivot.updateMatrixWorld(true);for(const c of sel){cubeGroup.attach(c);c.position.set(Math.round(c.position.x),Math.round(c.position.y),Math.round(c.position.z));}cubeGroup.remove(pivot)}
+    const speedInput=document.getElementById('speed'); const toAnimMs=spd=>Math.max(50,240-spd*5); let ANIM_MS=toAnimMs(+speedInput.value);
+    function paintRange(el){const min=+el.min||0,max=+el.max||100,val=+el.value;el.style.setProperty('--p', ((val-min)/(max-min))*100+'%')} paintRange(speedInput);
+    speedInput.addEventListener('input',e=>{ANIM_MS=toAnimMs(+e.target.value);paintRange(e.target);updateStepButtons()});
+    function animateTo(pivot, axisVec, start, target, sel, done){
+      turning=true; updateStepButtons(); const dur=ANIM_MS, t0=performance.now();
+      const tick=t=>{const k=Math.min(1,(t-t0)/dur), ang=start+(target-start)*k; pivot.setRotationFromAxisAngle(axisVec,ang); renderer.render(scene,camera);
+        if(k<1) requestAnimationFrame(tick); else { bakeFromPivot(pivot,sel); turning=false; busyUntil=performance.now()+COOLDOWN_MS; updateStepButtons(); done&&done(); }};
+      requestAnimationFrame(tick);
+    }
+    
+function rotateLayer(axis, layer, sign, logPayload, after){
+  const sel = [];
+  for (const c of cubies){
+    const v = axis==='x' ? c.position.x : axis==='y' ? c.position.y : c.position.z;
+    if (Math.round(v) === layer) sel.push(c);
+  }
+  const pivot = new THREE.Group();
+  cubeGroup.add(pivot);
+  sel.forEach(c => pivot.attach(c));
+
+  // Always animate the physical rotation, regardless of logging
+  animateTo(pivot, AX[axis], 0, sign * (Math.PI/2), sel, () => {
+    // Only record history/badges if explicitly allowed (record !== false)
+    if (logPayload && logPayload.record !== false) {
+      if(logPayload.src!=='undo' && logPayload.src!=='redo') redoStack.length = 0;
+      history.push(logPayload);
+      addBadgeBoth(logPayload.label);
+      rec.end(logPayload.label, logPayload.countForMetrics !== false);
+    }
+    after && after();
+  });
+}
+
+    
+function rotateWhole(worldAxisName, sign, logPayload, after){
+  const sel = [...cubies];
+  const pivot = new THREE.Group();
+  cubeGroup.add(pivot);
+  sel.forEach(c => pivot.attach(c));
+
+  // Always animate the physical rotation, regardless of logging
+  animateTo(pivot, AX[worldAxisName], 0, sign * (Math.PI/2), sel, () => {
+    // Only record history/badges if explicitly allowed (record !== false)
+    if (logPayload && logPayload.record !== false) {
+      if(logPayload.src!=='undo' && logPayload.src!=='redo') redoStack.length = 0;
+      history.push(logPayload);
+      addBadgeBoth(logPayload.label);
+      rec.end(logPayload.label, logPayload.countForMetrics !== false);
+    }
+    after && after();
+  });
+}
+
+
+    // Core dispatcher (faces/slices + whole cube)
+    
+function rotateAction(action, done){
+  const {axis,layer,sign,reps=1,label,src,isWhole,noLog,countForMetrics,localAxis,worldAxis,worldSign} = action;
+  if (isBusy()) return;
+
+  if (isWhole){
+    // Build a log payload regardless of noLog; use record:false to suppress history but keep animation
+    const basePayload = {
+      localAxis: (localAxis || axis),
+      sign, reps, label, isWhole:true,
+      src: src || 'script',
+      countForMetrics: false,
+      worldAxis: worldAxis,
+      worldSign: worldSign,
+      record: !noLog
+    };
+
+    let remaining = reps;
+    const step = () => {
+      const loc = (localAxis || axis);
+      const useWorldAxis = (worldAxis != null) ? worldAxis : worldForLocal(loc).axis;
+      const useWorldSign = (worldSign != null) ? worldSign : (sign * worldForLocal(loc).sgn);
+      const final = (remaining === 1);
+
+      rotateWhole(useWorldAxis, useWorldSign, basePayload, () => {
+        // Keep the cube's local orientation basis in sync every 90°
+        rotateOriLocal(loc, sign);
+        remaining--;
+        if (remaining > 0) step(); else { done && done(); }
+      });
+    };
+    step();
+    return;
+  }
+
+  // Faces/slices
+  const basePayload = {
+    axis, layer, sign, reps, label, isWhole:false,
+    src: src || 'script',
+    countForMetrics,
+    record: !noLog
+  };
+
+  if (reps <= 1){
+    rotateLayer(axis, layer ?? 0, sign, basePayload, done);
+  } else {
+    let i = 0;
+    const step = () => {
+      if (i + 1 < reps){
+        rotateLayer(axis, layer ?? 0, sign, { ...basePayload, record:false }, () => { i++; step(); });
+      } else {
+        rotateLayer(axis, layer ?? 0, sign, basePayload, () => { i++; done && done(); });
+      }
+    };
+    step();
+  }
+}
+
+
+    /* ---------- Drag turning ---------- */
+    const drag={active:false,sx:0,sy:0,axis:null,layer:0,sel:[],pivot:null,plus:null,angle:0,picked:null};
+    const AXIS_LOCK_PX2_FACE=6, AXIS_LOCK_PX2_SLICE=3, SNAP_FRAC_FACE=0.10, SNAP_FRAC_SLICE=0.08, HALF_THRESH=0.75;
+    let activePointerId=null; const tmpVec=new THREE.Vector3();
+    function resetDrag(){Object.assign(drag,{active:false,axis:null,layer:0,sel:[],pivot:null,plus:null,angle:0,picked:null})}
+    const guard=fn=>()=>{if(isBusy())return; fn()};
+    function takePointer(e){activePointerId=e.pointerId; try{canvas.setPointerCapture(e.pointerId)}catch{}}
+    function releasePointer(e){try{canvas.releasePointerCapture(e.pointerId)}catch{} if(activePointerId===e.pointerId) activePointerId=null}
+    function camDragVec(dx,dy){ const {r,u}=camBasis(); return tmpVec.set(0,0,0).addScaledVector(r,dx).addScaledVector(u,-dy).normalize(); }
+
+    canvas.addEventListener('pointerdown',e=>{
+      if(e.pointerType==='touch') e.preventDefault();
+      if(e.pointerType==='mouse' && (e.button!==0 || e.shiftKey)) return;
+      if(isBusy() || activePointerId!==null) return;
+      const info=pick(e); if(!info) return;
+      takePointer(e);
+      Object.assign(drag,{active:true,sx:e.clientX,sy:e.clientY,axis:null,angle:0,picked:info});
+      rec.begin();
+    });
+
+    canvas.addEventListener('pointermove',e=>{
+      if(activePointerId!==e.pointerId) return;
+      if(!drag.active || isBusy()) return;
+      if(e.pointerType==='touch') e.preventDefault();
+      const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy, d2=dx*dx+dy*dy;
+      if(!drag.axis){
+        const n=drag.picked.normal;
+        const cand=Math.abs(n.x)>0.8?['y','z']:Math.abs(n.y)>0.8?['x','z']:['x','y'];
+        const v=camDragVec(dx,dy);
+        let axis=cand[0], best=-1; for(const a of cand){ const s=Math.abs(v.dot(AX[a])); if(s>best){best=s; axis=a;} }
+        const layerGuess=layerIndex(drag.picked.cubie, axis);
+        const need=(layerGuess===0?AXIS_LOCK_PX2_SLICE:AXIS_LOCK_PX2_FACE);
+        if(d2<need) return;
+        drag.axis=axis; drag.layer=layerGuess;
+        drag.sel=[]; for(const c of cubies){ const vv=axis==='x'?c.position.x:axis==='y'?c.position.y:c.position.z; if(Math.round(vv)===drag.layer) drag.sel.push(c); }
+        drag.pivot=new THREE.Group(); cubeGroup.add(drag.pivot); drag.sel.forEach(c=>drag.pivot.attach(c));
+        drag.plus=new THREE.Vector3().crossVectors(n,AX[axis]).normalize();
+      }
+      const dragWorld=camDragVec(dx,dy); const signed=dragWorld.dot(drag.plus); const target=THREE.MathUtils.clamp(signed*Math.PI,-3.2,3.2);
+      drag.angle=target; drag.pivot.setRotationFromAxisAngle(AX[drag.axis],target); renderer.render(scene,camera);
+    });
+
+    function commitOrCancelSnap(){
+      const q=Math.PI/2, h=Math.PI, frac=(drag.layer===0?SNAP_FRAC_SLICE:SNAP_FRAC_FACE), a=Math.abs(drag.angle);
+      if(a < q*frac){
+        animateTo(drag.pivot,AX[drag.axis],drag.angle,0,drag.sel,()=>{rec.abort();updateMetrics();resetDrag()});
+      }else{
+        let snap,reps,sign,label;
+        if(a >= Math.PI*HALF_THRESH){ snap=(drag.angle>0?h:-h); reps=2; sign = drag.angle>0?+1:-1; }
+        else{ snap=(drag.angle>0?q:-q); reps=1; sign = drag.angle>0?+1:-1; }
+        label = labelFromAction(drag.axis,drag.layer,sign,reps);
+        animateTo(drag.pivot,AX[drag.axis],drag.angle,snap,drag.sel,()=>{
+          redoStack.length=0;
+          const logObj={axis:drag.axis,layer:drag.layer,sign,reps,label,isWhole:false,src:'manual',countForMetrics:true};
+          history.push(logObj);
+          addBadgeBoth(label); rec.end(label,true);
+          resetDrag();
+        });
+      }
+    }
+    ['pointerup','pointercancel','pointerleave'].forEach(t=>canvas.addEventListener(t,e=>{
+      if(activePointerId!==e.pointerId) return;
+      if(drag.active){ if(!drag.axis){ rec.abort(); updateMetrics(); resetDrag(); } else { commitOrCancelSnap(); } }
+      releasePointer(e);
+    }));
+
+    /* ---------- Scramble / Player ---------- */
+    const SCR_FACES=['U','D','L','R','F','B'], SCR_SUFFIX=['',"'",'2']; const scrambleBox=document.getElementById('scramble');
+    function genScramble(n=20){ const out=[]; let lastAxis=-1; while(out.length<n){ const f=SCR_FACES[(Math.random()*6)|0]; const axis=(f==='U'||f==='D')?0:(f==='L'||f==='R')?1:2; if(axis===lastAxis) continue; const s=SCR_SUFFIX[(Math.random()*3)|0]; out.push(f+s); lastAxis=axis; } return out; }
+    function setScrambleText(arr){ scrambleBox.textContent = arr.length?arr.join(' '):'(none)'; }
+    const invertToken=tok=>tok.endsWith("2")?tok:(tok.endsWith("'")?tok.slice(0,-1):tok+"'");
+    function parseToken(tok){
+      const base=tok.replace(/["'"2]/g,''), suf=tok.slice(base.length);
+      let axis,layer,sign,isWhole=false;
+      if(base==='R'){axis='x';layer=+1;sign=+1}
+      else if(base==='L'){axis='x';layer=-1;sign=-1}
+      else if(base==='U'){axis='y';layer=+1;sign=+1}
+      else if(base==='D'){axis='y';layer=-1;sign=-1}
+      else if(base==='F'){axis='z';layer=+1;sign=+1}
+      else if(base==='B'){axis='z';layer=-1;sign=-1}
+      else return null;
+      if(suf=="'") sign*=-1;
+      const reps=(suf==='2')?2:1;
+      return {axis,layer,sign,reps,label:tok,isWhole,countForMetrics:true};
+    }
+    const compile=tokens=>tokens.map(parseToken).filter(Boolean);
+    const compileInverse=tokens=>compile(tokens.slice().reverse().map(invertToken));
+
+    const btnStepF=document.getElementById('btn-step-fwd'), btnStepB=document.getElementById('btn-step-back');
+    function updateStepButtons(){ btnStepF.disabled = turning || player.idxStepF>=player.forwardActions.length; btnStepB.disabled = turning || player.idxStepR>=player.reverseActions.length; }
+
+    const player={baseScramble:[],forwardActions:[],reverseActions:[],running:false,paused:false,dir:+1,idxAuto:0,idxStepF:0,idxStepR:0,
+      setBase(scr){ this.baseScramble=scr.slice(); this.forwardActions=compile(this.baseScramble).map(a=>({...a,src:'player'})); this.reverseActions=compileInverse(this.baseScramble).map(a=>({...a,src:'player_reverse'})); this.stop(); this.idxStepF=0; this.idxStepR=0; updateStepButtons(); },
+      playForward:guard(function(){player.dir=+1;player.idxAuto=0;player.running=true;player.paused=false;logEvent('play');updateStepButtons();player._tick()}),
+      playReverse:guard(function(){player.dir=-1;player.idxAuto=0;player.running=true;player.paused=false;logEvent('play_reverse');updateStepButtons();player._tick()}),
+      pause(){this.paused=true;logEvent('pause');updateStepButtons() },
+      resume:guard(function(){ if(!player.running){player.idxAuto=0;player.running=true;player.paused=false;logEvent('resume_cold')}else{player.paused=false;logEvent('resume')} updateStepButtons();player._tick(); }),
+      stop(){this.running=false;this.paused=false;this.idxAuto=0;logEvent('stop');updateStepButtons()},
+      _tick(){ if(!this.running||this.paused) return; if(isBusy()){setTimeout(()=>this._tick(),20);return}
+        const acts=this.dir>0?this.forwardActions:this.reverseActions;
+        if(this.idxAuto>=acts.length){ this.running=false; updateStepButtons(); return; }
+        const act=acts[this.idxAuto++]; rec.begin(); rotateAction(act, ()=>this._tick()); },
+      stepForward:guard(function(){ const base=player.forwardActions[player.idxStepF]; if(!base){updateStepButtons();return;} player.idxStepF++; const act={...base,src:'player_step_forward'}; logEvent('step_forward'); rec.begin(); rotateAction(act, ()=>updateStepButtons()); }),
+      stepBackward:guard(function(){ const base=player.reverseActions[player.idxStepR]; if(!base){updateStepButtons();return;} player.idxStepR++; const act={...base,src:'player_step_backward'}; logEvent('step_backward'); rec.begin(); rotateAction(act, ()=>updateStepButtons()); })
+    };
+
+    /* ---------- UI wiring ---------- */
+    const movesBoxEl=document.getElementById('moves');
+    let history=[];
+    const redoStack=[];
+    const clearMovesUIOnly=()=>{ movesBoxEl.innerHTML=''; };
+    const clearMovesAll=()=>{ movesBoxEl.innerHTML=''; rec.clear(); logEvent('moves_cleared'); };
+
+    let currentScramble=[];
+    function regenerate(n=20){ currentScramble=genScramble(n); player.setBase(currentScramble); setScrambleText(currentScramble); logEvent('scramble_generated',{scramble:currentScramble.join(' ')}) }
+    regenerate(20);
+
+    document.getElementById('btn-gen').addEventListener('click', ()=>{regenerate(20);updateStepButtons()});
+    document.getElementById('btn-play').addEventListener('click', ()=>player.playForward());
+    document.getElementById('btn-play-rev').addEventListener('click', ()=>player.playReverse());
+    document.getElementById('btn-pause').addEventListener('click', ()=>player.pause());
+    document.getElementById('btn-resume').addEventListener('click', ()=>player.resume());
+    document.getElementById('btn-step-fwd').addEventListener('click', ()=>player.stepForward());
+    document.getElementById('btn-step-back').addEventListener('click', ()=>player.stepBackward());
+
+    document.getElementById('btn-reset').addEventListener('click', guard(()=>{ player.stop(); buildSolved(); clearMovesUIOnly(); resetView(); history=[]; redoStack.length=0; rec.resetTimer(); resetOrientation(); logEvent('cube_reset'); updateStepButtons(); }));
+
+    document.getElementById('btn-tutorial').addEventListener('click', ()=>{ if(!splash.isConnected) document.body.appendChild(splash); showSplash('Loading Interactive Tutorial…'); setTimeout(()=>{ window.location.href='adaptive-tutorial-intro.html'; }, 600); });
+
+    document.getElementById('btn-reset-moves-view').addEventListener('click', ()=>{ movesBoxEl.innerHTML=''; logEvent('moves_view_reset'); });
+    document.getElementById('btn-clear').addEventListener('click', ()=>{ clearMovesAll(); updateStepButtons(); });
+    document.getElementById('btn-reset-timer').addEventListener('click', ()=>{ rec.resetTimer(); logEvent('timer_reset'); });
+
+    
+function inverseOf(act){
+  if (act.isWhole){
+    return { ...act, sign: -act.sign, worldSign: (act.worldSign != null ? -act.worldSign : undefined) };
+  }
+  return { ...act, sign: -act.sign };
+}
+
+
+    /* ---------- UNDO/REDO ---------- */
+    document.getElementById('btn-undo').addEventListener('click', guard(()=>{
+  if (history.length === 0) return;
+  let last = history.pop();
+
+  // Skip any non-physical view-orbit markers if present
+  while (last && last.src === 'view_orbit'){
+    const badges = movesBoxEl.querySelectorAll('.badge');
+    if (badges.length) badges[badges.length - 1].remove();
+    last = history.pop();
+  }
+  if (!last) return;
+
+  redoStack.push(last);
+  const inv = inverseOf(last);
+
+  const invLabel = last.isWhole ? invertToken(last.label)
+    : labelFromAction(inv.axis ?? 'x', inv.layer ?? 0, inv.sign, inv.reps ?? 1);
+
+  rec.begin();
+  // Use stored worldAxis/worldSign for whole-cube; noLog:true (record:false) but still animate
+  rotateAction({ ...inv, src:'undo', noLog:true }, () => {
+    // Remove the visual of the popped move from Moves rail
+    const badges = movesBoxEl.querySelectorAll('.badge');
+    if (badges.length) badges[badges.length - 1].remove();
+
+    // Add inverse label to Persistent only
+    persistBox.appendChild(mkBadge(invLabel));
+    persistBox.scrollTop = persistBox.scrollHeight;
+
+    // Metrics: count turns, not rotations
+    const countMetrics = (last.countForMetrics !== false) && (last.isWhole !== true);
+    rec.end(invLabel, countMetrics);
+
+    logEvent('undo', { label:last.label });
+    updateStepButtons();
+  });
+}));
+
+    document.getElementById('btn-redo').addEventListener('click', guard(()=>{
+  if (redoStack.length === 0) return;
+  const again = redoStack.pop();
+  rec.begin();
+  rotateAction({ ...again, src:'redo', noLog:false }, () => {
+    logEvent('redo', { label: again.label });
+    updateStepButtons();
+  });
+}));
+
+    /* ---------- Move Picker keyboard (adaptive + whole cube) ---------- */
+    const moveGrid=document.getElementById('moveGrid');
+    function makeBtn(lbl,onClick){ const b=document.createElement('button'); b.className='btn-key'; b.type='button'; b.textContent=lbl; b.title=lbl; b.addEventListener('click', guard(onClick)); return b; }
+
+    // Faces & slices (no double-turn buttons shown)
+    const faces = ["R","R'","U","U'","F","F'","L","L'","D","D'","B","B'","M","M'","E","E'","S","S'"];
+    faces.forEach(m=>{
+      moveGrid.appendChild(
+        makeBtn(m, ()=>{
+          const base=m.replace(/["'"2]/g,''); const suf=m.slice(base.length);
+          const act = moveToAction(base, suf);
+          rec.begin();
+          rotateAction(act, ()=>{});
+        })
+      );
+    });
+
+    // Whole-cube (view-relative), no "2" buttons shown — explicit world axis capture
+    const whole = ["x","x'","y","y'","z","z'"];
+    function findLocalForWorldAxis(ax){ for(const L of ['x','y','z']) if(ORI[L].axis===ax) return L; return 'x'; }
+    function wholeViewToAction(lbl){
+      const base=lbl.replace(/["'"2]/g,''), suf=lbl.slice(base.length);
+      let sign=+1, reps=1; if(suf=="'") sign=-1; if(suf==="2") reps=2;
+      const vm=viewMapping();
+      const entry = base==='x' ? vm.R : base==='y' ? vm.U : vm.F;
+      const worldAxisName = entry.axis;
+      const worldSign = (-sign) * entry.sgn; // flip so x/x'/y/y'/z/z' feel correct to the user
+      const localAxis = findLocalForWorldAxis(worldAxisName)
+      const localSign = worldSign * ORI[localAxis].sgn;
+      return {localAxis, sign: localSign, reps, isWhole:true, label:lbl, countForMetrics:false, worldAxis: worldAxisName, worldSign: worldSign};
+    }
+    whole.forEach(lbl=>{
+      moveGrid.appendChild(
+        makeBtn(lbl, ()=>{ const act=wholeViewToAction(lbl); rec.begin(); rotateAction(act, ()=>{}); })
+      );
+    });
+
+    document.addEventListener('keydown', (e) => {
+      const tag = (e.target && e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) return;
+      if (isBusy()) return;
+      const k = e.key;
+      if (/^[xyzXYZ]$/.test(k)) {
+        e.preventDefault();
+        const base = k.toLowerCase();
+        const primed = (k === k.toUpperCase());
+        const lbl = base + (primed ? "'" : "");
+        const act = wholeViewToAction(lbl);
+        rec.begin(); rotateAction(act, ()=>{});
+      }
+    });
+
+    /* ---------- View-orbit quarter-turn detector (manual x/y/z) ---------- */
+    function vecFromEntry(e){
+      if(e.axis==='x') return new THREE.Vector3(e.sgn,0,0);
+      if(e.axis==='y') return new THREE.Vector3(0,e.sgn,0);
+      return new THREE.Vector3(0,0,e.sgn);
+    }
+    prevDisc = null;
+    function onViewQuarterTurn(localAxis, sign){
+      const lbl = localAxis + (sign>0 ? '' : "'");
+      // Markers for UI/history to reflect view, not physical cube rotation
+      history.push({localAxis, sign, reps:1, label:lbl, isWhole:true, src:'view_orbit', countForMetrics:false});
+      addBadgeBoth(lbl);
+      rec.end(lbl, false);
+      rotateOriLocal(localAxis, sign);
+    }
+    function detectViewBasedWholeCube(m){
+      const curr = { U:m.U, F:m.F, R:m.R };
+      if(!prevDisc){ prevDisc = curr; return; }
+      const same = (a,b)=> a.axis===b.axis && a.sgn===b.sgn;
+      if(same(prevDisc.U, curr.U)){
+        const Uv = vecFromEntry(curr.U);
+        const F0 = vecFromEntry(prevDisc.F), F1 = vecFromEntry(curr.F);
+        const k = Uv.dot( F0.clone().cross(F1) );
+        if(!same(prevDisc.F, curr.F) || !same(prevDisc.R, curr.R)){
+          onViewQuarterTurn('y', k>0 ? +1 : -1);
+        }
+      } else if(same(prevDisc.R, curr.R)){
+        const Rv = vecFromEntry(curr.R);
+        const U0 = vecFromEntry(prevDisc.U), U1 = vecFromEntry(curr.U);
+        const k = Rv.dot( U0.clone().cross(U1) );
+        if(!same(prevDisc.U, curr.U) || !same(prevDisc.F, curr.F)){
+          onViewQuarterTurn('x', k>0 ? +1 : -1);
+        }
+      } else if(same(prevDisc.F, curr.F)){
+        const Fv = vecFromEntry(curr.F);
+        const U0 = vecFromEntry(prevDisc.U), U1 = vecFromEntry(curr.U);
+        const k = Fv.dot( U0.clone().cross(U1) );
+        if(!same(prevDisc.U, curr.U) || !same(prevDisc.R, curr.R)){
+          onViewQuarterTurn('z', k>0 ? +1 : -1);
+        }
+      }
+      prevDisc = curr;
+    }
+
+    /* ---------- Export Notes ---------- */
+    function downloadTXT(text, filename){
+      const blob = new Blob([text], {type:'text/plain'}); const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+    function formatNotes(){
+      const movesMerged = rec.list.map((m,i)=>{
+        const h = history[i] || null;
+        return {
+          index:i, label:m.label, source:h?.src ?? null,
+          axis:h?.axis ?? null, layer:h?.layer ?? null, sign:h?.sign ?? null, reps:h?.reps ?? 1, isWhole: !!h?.isWhole,
+          countForMetrics: m.countForMetrics !== false,
+          tStartMs: m.tStart, tEndMs: m.tEnd, dtMs: m.tEnd - m.tStart,
+          wallStartISO: new Date(m.wallStart).toISOString(),
+          wallEndISO: new Date(m.wallEnd).toISOString()
+        };
+      });
+      const meta = {
+        version: 'erno-adaptive-0.9',
+        createdAt: new Date().toISOString(),
+        themeId: loadThemeId(),
+        speed: +speedInput.value,
+        canvas: { w: stage.clientWidth, h: stage.clientHeight },
+        scramble: currentScramble.join(' ')
+      };
+      const header = [
+        'Erno AI — Session Notes (Adaptive)',
+        '==================================',
+        `Created:     ${meta.createdAt}`,
+        `Theme:       ${meta.themeId}`,
+        `Speed:       ${meta.speed}`,
+        `Canvas:      ${meta.canvas.w}×${meta.canvas.h}`,
+        `Scramble:    ${meta.scramble || '(none)'}`,
+        ''
+      ].join('\n');
+      const movesTxt = [
+        'Moves:',
+        '------',
+        ...(movesMerged.length
+           ? movesMerged.map(m =>
+              `#${String(m.index).padStart(3,'0')}  ${m.label}  [src=${m.source ?? 'manual/unknown'}]  ` +
+              `t=${m.tStartMs.toFixed(1)}→${m.tEndMs.toFixed(1)} ms (Δ=${m.dtMs.toFixed(1)} ms)  ` +
+              `axis=${m.axis ?? '-'} layer=${m.layer ?? '-'} sign=${m.sign ?? '-'} reps=${m.reps} whole=${m.isWhole} include=${m.countForMetrics}`
+             )
+           : ['(none)']),
+        ''
+      ].join('\n');
+      const eventsTxt = [
+        'Events:',
+        '-------',
+        ...(events.length ? events.map(e => `${new Date(e.at).toISOString()}  ${e.type}`) : ['(none)']),
+        ''
+      ].join('\n');
+      return [header, movesTxt, eventsTxt].join('\n');
+    }
+    document.getElementById('btn-export-txt').addEventListener('click', ()=>{ const notes = formatNotes(); downloadTXT(notes, `erno-adaptive-${Date.now()}.txt`); });
+
+    /* ---------- Render loop ---------- */
+    (function loop(){
+      renderer.render(scene,camera);
+      detectViewBasedWholeCube( viewMapping() );
+      requestAnimationFrame(loop);
+    })();
+
+    // initial UI + orientation
+    resetOrientation();
+    updateStepButtons();
+  })();
+  </script>
+</body>
+</html>

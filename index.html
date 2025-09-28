@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Erno AI: Your Rubik's Cube Coach</title>
+<style>
+  /* ===== Theme variables (populated by JS too) ===== */
+  :root{
+    --bg:#0b0c10;        /* page background */
+    --panel:#121420;     /* sidebars/cards */
+    --ink:#e8eefc;       /* primary text */
+    --muted:#92a0b8;     /* secondary text */
+    --line:#1b2133;      /* borders */
+    --splashA:#11182a;   /* splash inner glow */
+    /* derived (JS will also update) */
+    --card:#0d1222;      /* .box background */
+    --chip:#16213a;      /* move badges */
+    --chipBorder:#22325a;
+    --btn:#16233e;       /* buttons */
+    --btnBorder:#22325a;
+    --accent:#6ea8ff;    /* slider fill (computed by JS per theme) */
+  }
+
+  a {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-size: inherit;       /* match surrounding text size */
+  font-weight: 500;         /* adjust if you want boldness */
+  color: var(--accent);     /* ties into your theme */
+  text-decoration: none;    /* remove underline by default */
+}
+
+a:hover {
+  text-decoration: underline;
+  filter: brightness(1.1);  /* slight hover feedback */
+}
+
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    display:grid;grid-template-columns:300px 1fr
+  }
+
+  /* Splash */
+  #splash{
+    position:fixed;inset:0;display:grid;place-items:center;
+    background:radial-gradient(1200px 800px at 50% 30%, var(--splashA) 0%, var(--bg) 60%);
+    color:var(--ink);z-index:9999;transition:opacity .5s ease, visibility .5s ease;
+  }
+  #splash.hide{opacity:0;visibility:hidden}
+  #splash h1{margin:0;font-weight:800;letter-spacing:.2px;text-align:center}
+  #splash h1 span{display:block;opacity:.85;font-size:14px;margin-top:8px;font-weight:500}
+  /* spinner */
+  /* spinner */
+#spinner{
+  display:block;                 /* ensures margin auto can center it */
+  margin:14px auto 0;            /* <— change 14px to move it closer/farther below the text */
+  width:40px;height:40px;border-radius:50%;
+  border:4px solid rgba(255,255,255,.18);
+  border-top-color:var(--ink);
+  animation:spin 0.9s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  aside{
+    position:relative;height:100vh;overflow:auto;background:var(--panel);
+    border-right:1px solid var(--line);padding:12px 10px 14px
+  }
+  main{position:relative;height:100vh}
+  #stage{position:absolute;inset:0}
+  canvas{display:block;width:100%;height:100%; touch-action:none; }
+  h2{font-size:16px;margin:6px 0 8px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px}
+  #scramble{font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+  #moves{display:flex;flex-wrap:wrap;gap:6px;max-height:35vh;overflow:auto}
+  .badge{background:var(--chip);border:1px solid var(--chipBorder);border-radius:999px;padding:.35rem .6rem;font-weight:700}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button{
+    background:var(--btn);border:1px solid var(--btnBorder);color:var(--ink);
+    border-radius:10px;padding:.55rem .8rem;font-weight:800;cursor:pointer
+  }
+  button:hover{filter:brightness(1.07)}
+  .btn-mini{
+    background:var(--btn);border:1px solid var(--btnBorder);color:var(--ink);
+    border-radius:8px;padding:.25rem .5rem;font-weight:800;font-size:12px;cursor:pointer
+  }
+  label small{color:var(--muted)}
+  .stat{display:flex;justify-content:space-between;gap:10px}
+  .stat b{font-size:13px}
+
+  /* Theme-flexible range (speed) */
+  input[type="range"]{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:22px; background:transparent; cursor:pointer;
+    background:
+      linear-gradient(to right, var(--accent) 0 0) 0/var(--p,0%) 100% no-repeat,
+      linear-gradient(to right, var(--btnBorder) 0 0);
+    border-radius:999px;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{
+    height:6px; background:transparent; border-radius:999px;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+    background:var(--ink); border:2px solid var(--btnBorder); margin-top:-5px;
+  }
+  input[type="range"]::-moz-range-track{
+    height:6px; background:var(--btnBorder); border:none; border-radius:999px;
+  }
+  input[type="range"]::-moz-range-progress{
+    height:6px; background:var(--accent); border:none; border-radius:999px;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:16px; height:16px; border-radius:50%;
+    background:var(--ink); border:2px solid var(--btnBorder);
+  }
+
+  /* Title banner */
+  #brand{
+    position:absolute;left:50%;top:12px;transform:translateX(-50%);
+    font-weight:800;font-size:18px;color:var(--ink);
+    background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);
+    border-radius:10px;padding:.4rem .6rem;backdrop-filter:blur(2px);pointer-events:none
+  }
+
+  
+#btn-tutorial{
+  position:absolute;
+  right:56px;
+  top:12px;
+  z-index:20;              /* keep the positioning */
+  background:var(--btn);   /* match normal buttons */
+  border:1px solid var(--btnBorder);
+  color:var(--ink);
+  border-radius:10px;
+  padding:.55rem .8rem;    /* same padding as buttons */
+  font-weight:800;
+  cursor:pointer;
+}
+#btn-tutorial:hover{ filter:brightness(1.07); }
+
+
+  /* Settings icon */
+  #btn-settings{
+    position:absolute;right:12px;top:12px;z-index:20;
+    background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);
+    border-radius:10px;padding:.45rem .6rem;backdrop-filter:blur(2px)
+  }
+
+  /* === Instructions button (replaces dropdown) === */
+  #btn-instructions{
+    position:absolute; left:12px; top:-37px; z-index:20;
+    background:var(--btn); border:1px solid var(--btnBorder); color:var(--ink);
+    border-radius:10px; padding:.55rem .8rem; font-weight:800; cursor:pointer;
+  }
+  #btn-instructions:hover{ filter:brightness(1.07); }
+
+  /* (Legacy #tips styles left intact; no dropdown markup now) */
+  #tips{ position:absolute; left:12px; top:52px; z-index:20; }
+
+  /* === Instructions modal (theme-flexible, mirrors Settings) === */
+  #instrBackdrop[hidden]{display:none}
+  #instrBackdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10000;
+    display:grid; place-items:center; padding:20px;
+  }
+  #instrPanel{
+    width:min(720px,95vw); max-height:90vh; overflow:auto;
+    background:var(--panel); color:var(--ink); border:1px solid var(--line);
+    border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.5); padding:14px;
+  }
+
+  /* === Instructions dropdown (old) — kept but unused === */
+  #tips details{
+    background:rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:10px;
+    backdrop-filter:blur(2px);
+    overflow:hidden;
+    color:var(--ink);
+  }
+  #tips summary{
+    list-style:none; cursor:pointer; padding:.55rem .7rem;
+    font-size:13px; font-weight:800; letter-spacing:.2px; user-select:none;
+    color:var(--ink);
+  }
+  #tips summary::-webkit-details-marker{ display:none; }
+  #tips summary::after{
+    content:"▾"; float:right; transition:transform .2s ease; opacity:.85; transform:rotate(-90deg);
+  }
+  #tips details[open] summary::after{ transform:rotate(0deg); }
+  #tips .tips-body{
+    border-top:1px solid rgba(255,255,255,.08);
+    padding:.55rem .7rem; font-size:13px; line-height:1.35;
+    overflow:hidden; max-height:0; transition:max-height .28s ease;
+    color:var(--ink);
+  }
+  #tips details[open] .tips-body{ max-height:420px; }
+
+  /* Persistent ticker (bottom-left) */
+  #persistWrap{position:fixed;left:312px;bottom:12px;max-width:480px;z-index:20;pointer-events:none}
+  #persist{
+    pointer-events:auto;
+    background:var(--card);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:10px;padding:8px;box-shadow:0 10px 24px rgba(0,0,0,.35);backdrop-filter:blur(2px)
+  }
+  #persist h3{margin:0 0 6px 0;font-size:13px;color:var(--ink)}
+  #persistMoves{display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow:auto}
+
+  /* ===== Settings overlay ===== */
+  #settingsBackdrop[hidden]{display:none}
+  #settingsBackdrop{
+    position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;
+    display:grid;place-items:center;padding:20px
+  }
+  #settingsPanel{
+    width:min(900px,95vw);max-height:90vh;overflow:auto;
+    background:var(--panel);color:var(--ink);border:1px solid var(--line);
+    border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.5);padding:14px
+  }
+  .sp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .sp-head h3{margin:0;font-size:18px}
+  .sp-close{background:var(--btn);border:1px solid var(--btnBorder);border-radius:10px;padding:.4rem .6rem;cursor:pointer}
+  .sp-body{display:grid;grid-template-columns:180px 1fr;gap:12px}
+  .tabs{display:flex;flex-direction:column;gap:6px}
+  .tab{
+    background:var(--card);border:1px solid var(--line);color:var(--ink);
+    padding:.6rem .7rem;border-radius:10px;cursor:pointer;text-align:left
+  }
+  .tab.active{outline:2px solid #2f4fb3}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px}
+  .themeGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+  .themeCard{
+    display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;
+    height:64px;border-radius:10px;border:1px solid var(--line);overflow:hidden;cursor:pointer;position:relative
+  }
+  .themeName{font-size:12px;margin-top:6px;opacity:.8}
+  .themeCard.selected{outline:2px solid #6ea8ff}
+  .sp-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .btn-ghost{background:transparent;border:1px dashed var(--btnBorder);color:var(--ink)}
+
+  /* ===== Move Picker keyboard (bottom-right) ===== */
+  #movePicker{
+    position:fixed;right:12px;bottom:12px;
+    z-index:21;
+    background:var(--card);
+    color:var(--ink);
+    border:1px solid var(--line);
+    border-radius:12px;padding:8px;box-shadow:0 10px 24px rgba(0,0,0,.35);backdrop-filter:blur(2px);
+    min-width:min(720px, 92vw);
+  }
+  #movePicker h3{
+    margin:0 0 6px 0;font-size:13px;font-weight:800;color:var(--ink);letter-spacing:.2px
+  }
+  .keygrid{ display:flex;flex-wrap:wrap;gap:6px }
+  .btn-key{
+    font-family:ui-monospace,Consolas,monospace;
+    padding:.45rem .65rem;border-radius:10px;border:1px solid var(--btnBorder);
+    background:var(--btn);color:var(--ink);font-weight:800;cursor:pointer
+  }
+  .btn-key:focus{outline:2px solid #2f4fb3;outline-offset:1px}
+</style>
+</head>
+<body>
+  <!-- Splash -->
+  <div id="splash">
+    <div style="text-align:center">
+      <h1>
+        Erno AI: Your Rubik's Cube Coach
+        <span id="splash-sub">Loading assets…</span>
+      </h1>
+      <div id="spinner" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <aside>
+    <h2>Scramble</h2>
+    <div class="box" id="scramble">(none)</div>
+
+    <div class="row" style="margin-top:8px">
+      <button id="btn-gen">Generate</button>
+      <button id="btn-play">Play ▶</button>
+      <button id="btn-play-rev">Run Reverse ⏪</button>
+      <button id="btn-reset">Reset Cube</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="btn-pause">Pause ⏸</button>
+      <button id="btn-resume">Resume ⏵</button>
+      <button id="btn-step-back">Step Scramble ◀ (Only goes through scramble once independently) </button>
+      <button id="btn-step-fwd">Step Scramble ▶ (Only goes through scramble once independently) </button>
+    </div>
+
+    <!-- Moves header + view-only reset -->
+    <h2 style="margin-top:14px; display:flex; align-items:center; justify-content:space-between;">
+      Moves
+      <button id="btn-reset-moves-view" class="btn-mini" title="Clear only the Moves list (UI), keep cube/timer/analytics intact">Reset Moves (view only)</button>
+    </h2>
+    <div class="box" id="moves" aria-live="polite" aria-label="Move tracker"></div>
+    <div class="row" style="margin-top:8px">
+      <button id="btn-undo">Undo</button>
+      <button id="btn-redo">Redo</button>
+      <button id="btn-clear">Clear</button>
+    </div>
+
+    <h2 style="margin-top:14px">Speed & Metrics</h2>
+    <div class="box">
+      <label>Speed <small>(1–40)</small></label>
+      <input id="speed" type="range" min="1" max="40" value="16" />
+      <div class="row" style="margin-top:6px">
+        <button id="btn-reset-timer">Reset Timer</button>
+      </div>
+      <div class="stat" style="margin-top:8px"><span>Moves</span><b id="m-moves">0</b></div>
+      <div class="stat"><span>Duration</span><b id="m-duration">0 ms</b></div>
+      <div class="stat"><span>TPS</span><b id="m-tps">0.00</b></div>
+      <div class="stat"><span>Total pause</span><b id="m-pause-total">0 ms</b></div>
+      <div class="stat"><span>Max pause</span><b id="m-pause-max">0 ms</b></div>
+    </div>
+  </aside>
+
+  <main>
+    <div id="stage"><canvas id="view"></canvas></div>
+
+    <!-- Main page title banner -->
+    <div id="brand">Erno AI: Your Rubik's Cube Coach</div>
+
+    <!-- Tutorial launcher (NEW) -->
+    <button id="btn-tutorial" title="Interactive Tutorial"><u><b>I don’t know how to solve a Cube.</b></u></button>
+
+    <!-- Settings gear -->
+    <button id="btn-settings" title="Settings">⚙️</button>
+
+    <!-- Instructions button (NEW, replaces dropdown) -->
+    <div id="tips">
+      <button id="btn-instructions" title="Instructions">Instructions</button>
+    </div>
+
+    <!-- Move Picker -->
+    <div id="movePicker" role="group" aria-label="Move Picker">
+      <h3>Move Picker</h3>
+      <div id="moveGrid" class="keygrid"></div>
+    </div>
+  </main>
+
+  <!-- Persistent ticker -->
+  <div id="persistWrap">
+    <div id="persist">
+      <h3>Persistent Moves</h3>
+      <div id="persistMoves"></div>
+    </div>
+  </div>
+
+  <!-- Settings overlay -->
+  <div id="settingsBackdrop" hidden>
+    <div id="settingsPanel">
+      <div class="sp-head">
+        <h3>Settings</h3>
+        <button class="sp-close" id="sp-close-top">✕</button>
+      </div>
+      <div class="sp-body">
+        <nav class="tabs">
+          <button class="tab active" id="tab-appearance">Appearance</button>
+          <button class="tab" id="tab-analytics">Analytics & Export</button>
+
+          <!-- NEW: BetterCube tab (shows LegacyCube is enabled) -->
+          <button class="tab" id="tab-bettercube">Enable BetterCube</button>
+
+          <button class="tab" id="tab-functions">Function Descriptions</button>
+          <!-- NEW TABS -->
+          <button class="tab" id="tab-credits">Credits</button>
+          <button class="tab" id="tab-contact">Contact</button>
+        </nav>
+
+        <!-- Appearance panel -->
+        <section class="panel" id="panel-appearance">
+          <h4 style="margin:0 0 8px 0">Themes</h4>
+          <div id="themeGrid" class="themeGrid"></div>
+          <div class="sp-actions">
+            <button class="btn-ghost" id="btn-theme-default">Reset to Default</button>
+            <span style="flex:1"></span>
+            <button id="btn-cancel">Cancel</button>
+            <button id="btn-save-exit">Save & Exit</button>
+          </div>
+        </section>
+
+        <!-- Analytics panel -->
+        <section class="panel" id="panel-analytics" hidden>
+          <h4 style="margin:0 0 8px 0">Session Notes</h4>
+          <p style="margin:6px 0 10px 0; color:var(--muted)">
+            Export a <b>.txt</b> notes file with your session: theme, speed, canvas size, scramble,
+            move list with timestamps, and key events (play/pause/resets/undo/redo). Human-readable,
+            easy to paste or share.
+          </p>
+          <div class="row">
+            <button id="btn-export-txt">Export Notes (.txt)</button>
+          </div>
+          <small style="display:block; margin-top:8px; color:var(--muted)">
+            Includes session-relative ms and wall-clock ISO timestamps.
+          </small>
+        </section>
+
+        <!-- NEW: BetterCube/Legacy info panel -->
+        <section class="panel" id="panel-bettercube" hidden>
+  <h4 style="margin:0 0 8px 0">LegacyCube Model</h4>
+  <p style="margin:6px 0 10px 0">
+    <b>LegacyCube is enabled.</b> This uses <i>fixed-face notation</i> with no whole-cube rotation tracking.
+    R/L/U/D/F/B (and slices M/E/S) always map to the same layers regardless of camera orientation.
+  </p>
+
+  <ul style="margin:0 0 10px 18px; padding-left:18px">
+    <li><b>Benefits:</b> 
+    <li>Logs stay short and compact since cube rotations aren’t tracked; only face turns appear, making review faster if you don’t care about orbit history.</li>
+    <li>No performance overhead—every action is applied directly with no orientation bookkeeping, ensuring smooth play even on low-end devices.</li>
+    <li>Algorithms and scrambles from third-party sources (timers, analyzers, PDFs) match directly, since they all assume fixed-face notation.</li>
+    <li>Undo/Redo behave consistently for fixed faces: reversals simply invert the last face turn, no matter what the camera view looks like.</li>
+  </ul>
+
+  <ul style="margin:0 0 10px 18px; padding-left:18px">
+    <li><b>Trade-offs vs BetterCube:</b> Camera view may not match move logs; clockwise on screen can look counter-intuitive after orbiting, requiring mental translation.</li>
+    <li>No explicit x/y/z entries—rotations vanish from history, so exports don’t always reproduce the exact session flow.</li>
+    <li>Middle slice parity isn’t adjusted under rotations; M/E/S behave strictly by fixed axes even if you’ve spun the cube view.</li>
+    <li>Rapid orbit + move spam can feel mismatched, since face inputs don’t adapt to camera changes (you must remember the fixed mapping).</li>
+    <li>Undo/Redo are not rotation-aware—reversals follow the face labels, not the view you’re currently looking at.</li>
+  </ul>
+
+          <div class="sp-actions">
+            <span style="flex:1"></span>
+            <button id="btn-enable-bcube" title="Switch to BetterCube (view-relative notation)">Enable BetterCube</button>
+          </div>
+        </section>
+
+        <!-- UPDATED: Full Function Descriptions -->
+        <section class="panel" id="panel-functions" hidden>
+          <h4 style="margin:0 0 10px 0">What every control does (and caveats)</h4>
+
+          <h5>Scramble & Playback</h5>
+          <ul>
+            <li><b>Generate</b> — Creates a fresh 20-move scramble (doesn’t alter the cube immediately). Sets the base sequence for Play/Reverse/Step Scramble.</li>
+            <li><b>Play ▶</b> — Auto-runs the scramble from start to finish; each step is animated and logged to the Moves list.</li>
+            <li><b>Run Reverse ⏪</b> — Auto-runs the inverse of the current scramble; also logs to the Moves list.</li>
+            <li><b>Pause ⏸ / Resume ⏵</b> — Temporarily halt / continue auto-playback.</li>
+            <li><b>Reset Cube</b> — Returns the cube to solved state, <u>resets the camera to the original view</u>, and clears the Moves list (left column). The <i>Persistent Moves</i> ticker stays as a running log.</li>
+          </ul>
+
+          <h5>Step Scramble (independent)</h5>
+          <ul>
+            <li><b>Step Scramble ◀ / ▶</b> — Step through the scramble once, independently of the Moves list history. Backward steps use the scramble’s inverse; forward steps use the scramble as written. Indexes reset on new scramble or when playback finishes.</li>
+          </ul>
+
+          <h5>Moves panel</h5>
+          <ul>
+            <li><b>Moves list</b> — Every applied move (manual drag, picker, Play/Reverse, step) is appended as a badge.</li>
+            <li><b>Reset Moves (view only)</b> — Clears <i>only</i> the on-screen Moves list (leaves cube, timer, analytics, and the Persistent ticker untouched).</li>
+            <li><b>Undo</b> — Applies the inverse of the last logged move and removes that badge from <b>Moves</b>. <i>Persistent Moves logs the inverse move</i> so your session history stays complete. <u>Analytics update only for turns</u> (face/slice), not rotations.</li>
+            <li><b>Redo</b> — Re-applies the most-recent undone move from the Redo stack, logging it again to <b>Moves</b> <i>and</i> <b>Persistent Moves</b>. <u>Analytics update only for turns</u> (face/slice), not rotations.</li>
+            <li><b>Clear</b> — Clears the Moves list and timing metrics. Does <i>not</i> change the cube state.</li>
+          </ul>
+
+          <h5>Input</h5>
+          <ul>
+            <li><b>Drag a layer</b> — Click/touch a face and drag roughly perpendicular to lock that layer. Release to snap to 90°/180° or cancel if the drag was tiny.</li>
+            <li><b>Move Picker (bottom-right)</b> — Click any move (R/U/F/L/D/B and M/E/S, with primes/2). Picker moves are logged just like manual drags.</li>
+            <li><b>Orbit/Zoom</b> — Right-drag or <b>Shift + Left-drag</b> to orbit. Mouse wheel zooms.</li>
+          </ul>
+
+          <h5>Speed & Metrics</h5>
+          <ul>
+            <li><b>Speed</b> — Animation duration control (1–40). This is <i>not</i> recorded in Analytics.</li>
+            <li><b>Reset Timer</b> — Clears timing metrics (Moves/Duration/TPS/Pauses) only.</li>
+            <li><b>Metrics</b> — <b>Moves</b> (count), <b>Duration</b> (first→last move), <b>TPS</b>, <b>Total pause</b>, <b>Max pause</b>.</li>
+          </ul>
+
+          <h5>Analytics & Export</h5>
+          <ul>
+            <li><b>Export Notes (.txt)</b> — Human-readable dump of your session (meta, moves, events).</li>
+          </ul>
+
+          <h5>Appearance</h5>
+          <ul>
+            <li><b>Themes</b> — Click a theme card for live preview. <b>Save &amp; Exit</b> persists it; <b>Reset to Default</b> returns to the built-in “Midnight”.</li>
+          </ul>
+
+          <h5>Persistent Moves</h5>
+          <ul>
+            <li>The bottom-left “Persistent Moves” ticker keeps a running log across actions like Reset Cube or view-only resets, <b>and now includes undo/redo</b>, so you can reference the full session.</li>
+          </ul>
+
+          <!-- NEW brief blurbs -->
+          <h5>BetterCube vs LegacyCube (summary)</h5>
+          <ul>
+            <li><b>BetterCube</b> — Tracks rotations (x/y/z), adapts move labels to view, logs rotations, simulating IRL solving.</li>
+            <li><b>LegacyCube</b> — No rotation tracking; fixed R/L/U/D/F/B mapping always. Simpler, shorter logs.</li>
+          </ul>
+
+          <h5>Other tabs</h5>
+          <ul>
+            <li><b>Credits</b> — Project attribution and author.</li>
+            <li><b>Contact</b> — Where to report issues or reach the project.</li>
+          </ul>
+
+          <h5>Notes & caveats</h5>
+          <ul>
+            <li>Interactions are guard-railed during animations; rapid clicks while a layer is turning will be ignored.</li>
+            <li>Overloading (e.g., Play + Reverse + speed changes spam) can lead to unexpected sequencing; finish one action before starting the next for best results.</li>
+            <li>Orientation detail: for slice moves, M/E/S use native sign; face moves are adjusted so a visible clockwise turn reads without a prime.</li>
+          </ul>
+        </section>
+
+        <!-- NEW: Credits panel -->
+        <section class="panel" id="panel-credits" hidden>
+          <h4 style="margin:0 0 8px 0">Credits</h4>
+          <p style="margin:6px 0 10px 0">Created by <b>Abhirup Dey</b></p>
+          <ul style="margin:0 0 6px 18px">
+            <li>Email: <a href="mailto:deyabhirup07@gmail.com">deyabhirup07@gmail.com</a></li>
+            <li>Email: <a href="mailto:adey68@gatech.edu">adey68@gatech.edu</a></li>
+          </ul>
+        </section>
+
+        <!-- NEW: Contact panel -->
+        <section class="panel" id="panel-contact" hidden>
+          <h4 style="margin:0 0 8px 0">Contact</h4>
+          <p style="margin:6px 0 0 0">
+            For any website-related issues or concerns, contact:
+            <a href="mailto:ernoaiproject@gmail.com">ernoaiproject@gmail.com</a>
+          </p>
+        </section>
+      </div>
+      <div class="sp-actions">
+        <button class="sp-close" id="sp-close-bottom">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instructions modal (NEW) -->
+  <div id="instrBackdrop" hidden>
+    <div id="instrPanel">
+      <div class="sp-head">
+        <h3>Instructions</h3>
+        <button class="sp-close" id="instr-close-top">✕</button>
+      </div>
+      <section class="panel" style="margin:0">
+        <div style="font-size:13px;line-height:1.35">
+          <p><b>Use the mouse (or one finger) to drag cube layers.</b></p>
+          <p>For best control, begin the drag roughly <em>perpendicular</em> to the target face to lock that layer—this applies to middle slices (<b>M/E/S</b>) as well.</p>
+          <p>Right-drag or <b>Shift + Left-drag</b> orbits; the mouse wheel zooms.</p>
+          <p>You may also use the <b>Move Picker Keyboard</b> on the bottom right of the screen if dragging is too difficult.</p>
+          <p>Note: Some things may not operate properly if overloaded. For example, executing Play + Run Reverse multiple times in a row and simultaneously changing the speed may not lead to <b>expected results.</b></p>
+          <p>For more information on function specifics, consult the <b>Function Descriptions</b> tab within Settings.</p>
+          <p>This is just the beginning, have fun :3</p>
+          <p><b>THIS APPLICATION IS A WORK IN PROGRESS</b></p>
+        </div>
+      </section>
+      <div class="sp-actions">
+        <span style="flex:1"></span>
+        <button id="instr-open-functions" title="Open Function Descriptions">Function Descriptions</button>
+        <button class="sp-close" id="instr-close-bottom">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script>
+  (() => {
+    /* ---------- Splash helpers ---------- */
+    const splash = document.getElementById('splash');
+    const splashSub = document.getElementById('splash-sub');
+    function showSplash(msg="Loading assets…"){ splashSub.textContent = msg; splash.classList.remove('hide'); }
+    function hideSplash(){ splash.classList.add('hide'); }
+    window.addEventListener('load', () => {
+      setTimeout(()=>hideSplash(), 700);
+      setTimeout(()=> { if (splash.isConnected) splash.remove(); }, 1500);
+    });
+
+    /* ---------- Theme system ---------- */
+    const STORAGE_KEY = 'erno_theme_v1';
+    const rootStyle = document.documentElement.style;
+
+    const THEMES = {
+      default:{name:'Midnight (Default)',v:{bg:'#0b0c10',panel:'#121420',ink:'#e8eefc',muted:'#92a0b8',line:'#1b2133',splashA:'#11182a'}},
+      cream:{name:'Cream',v:{bg:'#f4efe6',panel:'#fffaf2',ink:'#2c2a25',muted:'#6b665b',line:'#e1d9c9',splashA:'#efe7d8'}},
+      caramel:{name:'Caramel',v:{bg:'#2a1f1a',panel:'#3b2b22',ink:'#f8e9d4',muted:'#d9c2a8',line:'#4c3a30',splashA:'#3a2a22'}},
+      cyber:{name:'Cyber',v:{bg:'#0a0f0a',panel:'#0f1510',ink:'#d5ffd5',muted:'#90c990',line:'#183018',splashA:'#0f1c10'}},
+      nord:{name:'Nord',v:{bg:'#2e3440',panel:'#3b4252',ink:'#eceff4',muted:'#c0c8d5',line:'#4c566a',splashA:'#323a49'}},
+      dracula:{name:'Dracula',v:{bg:'#282a36',panel:'#1e2029',ink:'#f8f8f2',muted:'#b6b6c1',line:'#3b3c4b',splashA:'#2f3140'}},
+      solarDark:{name:'Solarized Dark',v:{bg:'#002b36',panel:'#073642',ink:'#eee8d5',muted:'#93a1a1',line:'#0b3a46',splashA:'#03313c'}},
+      solarLight:{name:'Solarized Light',v:{bg:'#fdf6e3',panel:'#f5efd9',ink:'#073642',muted:'#657b83',line:'#e6dec4',splashA:'#efe8d2'}},
+      catMocha:{name:'Catppuccin Mocha',v:{bg:'#1e1e2e',panel:'#242437',ink:'#cdd6f4',muted:'#a6adc8',line:'#313244',splashA:'#23233a'}},
+      gruvDark:{name:'Gruvbox Dark',v:{bg:'#1d2021',panel:'#282828',ink:'#ebdbb2',muted:'#d5c4a1',line:'#3c3836',splashA:'#232524'}},
+      gruvLight:{name:'Gruvbox Light',v:{bg:'#fbf1c7',panel:'#f2e5bc',ink:'#3c3836',muted:'#7c6f64',line:'#e0d2a4',splashA:'#f5e8bf'}},
+      oneDark:{name:'One Dark',v:{bg:'#21252b',panel:'#282c34',ink:'#e6efff',muted:'#a0afc1',line:'#323844',splashA:'#252a31'}},
+      synthwave:{name:'Synthwave',v:{bg:'#1b1227',panel:'#231833',ink:'#fedaff',muted:'#d7b6ff',line:'#3a2857',splashA:'#23173a'}},
+      monokai:{name:'Monokai',v:{bg:'#272822',panel:'#2e2f27',ink:'#f8f8f2',muted:'#c2c2b4',line:'#3b3c34',splashA:'#2c2d26'}},
+      mint:{name:'Mint',v:{bg:'#0e1412',panel:'#111a16',ink:'#d9fff2',muted:'#9de5cf',line:'#173026',splashA:'#15231e'}},
+      rosePine:{name:'Rosé Pine',v:{bg:'#191724',panel:'#1f1d2e',ink:'#e0def4',muted:'#908caa',line:'#2a2837',splashA:'#201e2f'}},
+      highContrast:{name:'High Contrast',v:{bg:'#000000',panel:'#0a0a0a',ink:'#ffffff',muted:'#bfbfbf',line:'#222',splashA:'#101010'}},
+      mono:{name:'Monochrome',v:{bg:'#111114',panel:'#16171a',ink:'#f1f2f5',muted:'#a9acb3',line:'#272a33',splashA:'#1b1c20'}}
+    };
+
+    function hexToRgb(h){ h=h.replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
+    function rgbToHex({r,g,b}){ const n=(r<<16)|(g<<8)|b; return '#'+n.toString(16).padStart(6,'0'); }
+    function mix(a,b,t){ const A=hexToRgb(a),B=hexToRgb(b); return rgbToHex({r:Math.round(A.r+(B.r-A.r)*t),g:Math.round(A.g+(B.g-A.g)*t),b:Math.round(A.b+(B.b-A.b)*t)}); }
+
+    function applyThemeVars(v){
+      const card = mix(v.panel, v.bg, 0.15);
+      const chip = mix(v.panel, v.line, 0.35);
+      const chipBorder = mix(v.line, v.panel, 0.4);
+      const btn = mix(v.panel, v.line, 0.25);
+      const btnBorder = mix(v.line, v.panel, 0.25);
+      const splashA = v.splashA || v.panel;
+      const accent = mix(v.ink, v.panel, 0.2); 
+
+      rootStyle.setProperty('--bg', v.bg);
+      rootStyle.setProperty('--panel', v.panel);
+      rootStyle.setProperty('--ink', v.ink);
+      rootStyle.setProperty('--muted', v.muted);
+      rootStyle.setProperty('--line', v.line);
+      rootStyle.setProperty('--splashA', splashA);
+      rootStyle.setProperty('--card', card);
+      rootStyle.setProperty('--chip', chip);
+      rootStyle.setProperty('--chipBorder', chipBorder);
+      rootStyle.setProperty('--btn', btn);
+      rootStyle.setProperty('--btnBorder', btnBorder);
+      rootStyle.setProperty('--accent', accent);
+    }
+    function applyThemeById(id){ const t = THEMES[id] || THEMES.default; applyThemeVars(t.v); }
+    function saveThemeId(id){ localStorage.setItem(STORAGE_KEY, id); }
+    function loadThemeId(){ return localStorage.getItem(STORAGE_KEY) || 'default'; }
+
+    const themeGrid = document.getElementById('themeGrid');
+    let selectedId = loadThemeId();
+    function makeCard(id, t){
+      const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column';
+      const card = document.createElement('div'); card.className = 'themeCard';
+      const sw = (color)=>{ const d=document.createElement('div'); d.style.background=color; return d; };
+      const v=t.v; card.append(sw(v.bg), sw(v.panel), sw(v.ink), sw(v.line));
+      if(id===selectedId) card.classList.add('selected');
+      card.addEventListener('click', ()=>{
+        selectedId = id;
+        document.querySelectorAll('.themeCard').forEach(el=>el.classList.remove('selected'));
+        card.classList.add('selected');
+        applyThemeVars(v); 
+      });
+      const nm = document.createElement('div'); nm.className='themeName'; nm.textContent=t.name;
+      wrap.append(card,nm); return wrap;
+    }
+    function rebuildThemeGrid(){ themeGrid.innerHTML=''; Object.entries(THEMES).forEach(([id,t])=>{ themeGrid.appendChild(makeCard(id, t)); }); }
+    applyThemeById(selectedId); rebuildThemeGrid();
+
+    // Live theme sync across open tutorial pages/tabs
+    window.addEventListener('storage', (e)=>{
+      if(e.key===STORAGE_KEY){ applyThemeById(e.newValue || 'default'); }
+    });
+
+    // Tabs
+    const settingsBackdrop = document.getElementById('settingsBackdrop');
+    const tabAppearance = document.getElementById('tab-appearance');
+    const tabAnalytics  = document.getElementById('tab-analytics');
+
+    // NEW: BetterCube tab
+    const tabBetterCube = document.getElementById('tab-bettercube');
+
+    const tabFunctions  = document.getElementById('tab-functions');
+    // NEW tab refs
+    const tabCredits   = document.getElementById('tab-credits');
+    const tabContact   = document.getElementById('tab-contact');
+
+    const panelAppearance = document.getElementById('panel-appearance');
+    const panelAnalytics  = document.getElementById('panel-analytics');
+
+    // NEW: BetterCube panel
+    const panelBetterCube = document.getElementById('panel-bettercube');
+
+    const panelFunctions  = document.getElementById('panel-functions');
+    // NEW panel refs
+    const panelCredits   = document.getElementById('panel-credits');
+    const panelContact   = document.getElementById('panel-contact');
+
+    function setTab(which){
+      [tabAppearance, tabAnalytics, tabBetterCube, tabFunctions, tabCredits, tabContact].forEach(t=>t && t.classList.remove('active'));
+      tabAppearance && tabAppearance.classList.toggle('active', which==='appearance');
+      tabAnalytics  && tabAnalytics .classList.toggle('active', which==='analytics');
+
+      // NEW
+      tabBetterCube && tabBetterCube.classList.toggle('active', which==='bettercube');
+
+      tabFunctions  && tabFunctions .classList.toggle('active', which==='functions');
+      tabCredits    && tabCredits   .classList.toggle('active', which==='credits');
+      tabContact    && tabContact   .classList.toggle('active', which==='contact');
+
+      panelAppearance.hidden = (which!=='appearance');
+      panelAnalytics.hidden  = (which!=='analytics');
+
+      // NEW
+      panelBetterCube.hidden = (which!=='bettercube');
+
+      panelFunctions.hidden  = (which!=='functions');
+      panelCredits.hidden    = (which!=='credits');
+      panelContact.hidden    = (which!=='contact');
+    }
+    tabAppearance.addEventListener('click', ()=>setTab('appearance'));
+    tabAnalytics .addEventListener('click', ()=>setTab('analytics'));
+
+    // NEW
+    tabBetterCube && tabBetterCube.addEventListener('click', ()=>setTab('bettercube'));
+
+    tabFunctions .addEventListener('click', ()=>setTab('functions'));
+    // NEW listeners
+    tabCredits   .addEventListener('click', ()=>setTab('credits'));
+    tabContact   .addEventListener('click', ()=>setTab('contact'));
+
+    document.getElementById('btn-settings').addEventListener('click', ()=>{
+      selectedId = loadThemeId(); applyThemeById(selectedId); rebuildThemeGrid(); settingsBackdrop.hidden = false;
+    });
+    const closeButtons = [document.getElementById('sp-close-top'), document.getElementById('sp-close-bottom'), document.getElementById('btn-cancel')];
+    closeButtons.forEach(b=> b && b.addEventListener('click', ()=>{ applyThemeById(loadThemeId()); settingsBackdrop.hidden = true; }));
+    document.getElementById('btn-theme-default').addEventListener('click', ()=>{ selectedId='default'; applyThemeById(selectedId); rebuildThemeGrid(); });
+    document.getElementById('btn-save-exit').addEventListener('click', ()=>{
+      saveThemeId(selectedId); applyThemeById(selectedId);
+      settingsBackdrop.hidden = true;
+      if (!splash.isConnected) document.body.appendChild(splash);
+      showSplash('Applying theme…');
+      setTimeout(()=>{ hideSplash(); }, 800);
+      logEvent('theme_applied', { themeId: selectedId });
+    });
+
+    /* ---------- NEW: Instructions modal wiring ---------- */
+    const instrBackdrop = document.getElementById('instrBackdrop');
+    document.getElementById('btn-instructions').addEventListener('click', ()=>{ instrBackdrop.hidden = false; });
+    ['instr-close-top','instr-close-bottom'].forEach(id=>{
+      const el = document.getElementById(id);
+      el && el.addEventListener('click', ()=>{ instrBackdrop.hidden = true; });
+    });
+    document.getElementById('instr-open-functions').addEventListener('click', ()=>{
+      instrBackdrop.hidden = true;
+      // Open Settings and jump straight to Function Descriptions
+      selectedId = loadThemeId(); applyThemeById(selectedId); rebuildThemeGrid();
+      settingsBackdrop.hidden = false;
+      setTab('functions');
+    });
+
+    /* ---------- NEW: Enable BetterCube => dual splash captions + redirect ---------- */
+    const btnEnableBC = document.getElementById('btn-enable-bcube');
+    if (btnEnableBC){
+      btnEnableBC.addEventListener('click', ()=>{
+        settingsBackdrop.hidden = true;
+        if (!splash.isConnected) document.body.appendChild(splash);
+        showSplash('Disabling LegacyCube, enabling BetterCube…');
+        setTimeout(()=>{
+          showSplash('Loading assets…');
+          setTimeout(()=>{ window.location.href='adaptive-move-picker.html'; }, 550);
+        }, 550);
+      });
+    }
+
+    /* ---------- Scene ---------- */
+    const canvas = document.getElementById('view');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, .1, 1000);
+
+    // Initial view constants + reset helper (for Reset Cube)
+    const CAM_INIT_POS = new THREE.Vector3(5.2, 4.7, 6.1);
+    const CAM_INIT_TARGET = new THREE.Vector3(0, 0, 0);
+    function resetView(){
+      camera.position.copy(CAM_INIT_POS);
+      camera.lookAt(CAM_INIT_TARGET);
+    }
+    resetView();
+    scene.add(camera);
+    scene.add(new THREE.AmbientLight(0xffffff,.6));
+    const key = new THREE.DirectionalLight(0xffffff,.9); key.position.set(3,6,7); scene.add(key);
+
+    const stage = document.getElementById('stage');
+    new ResizeObserver(()=>{
+      const w=stage.clientWidth,h=stage.clientHeight;
+      renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+    }).observe(stage);
+
+    /* ---------- Grid-cube environment ---------- */
+    function makeGridCube(size=600, divisions=120, color=0x223355, opacity=0.07){
+      const g = new THREE.Group();
+      const mk = ()=>{ const gh=new THREE.GridHelper(size, divisions, color, color); gh.material.transparent=true; gh.material.opacity=opacity; return gh; };
+      const xz1=mk(); xz1.position.y= size/2; g.add(xz1);
+      const xz2=mk(); xz2.position.y=-size/2; g.add(xz2);
+      const xy1=mk(); xy1.rotation.x=Math.PI/2; xy1.position.z= size/2; g.add(xy1);
+      const xy2=mk(); xy2.rotation.x=Math.PI/2; xy2.position.z=-size/2; g.add(xy2);
+      const yz1=mk(); yz1.rotation.z=Math.PI/2; yz1.position.x= size/2; g.add(yz1);
+      const yz2=mk(); yz2.rotation.z=Math.PI/2; yz2.position.x=-size/2; g.add(yz2);
+      return g;
+    }
+    scene.add(makeGridCube());
+
+    /* ---------- Cube ---------- */
+    const cubeGroup = new THREE.Group(); scene.add(cubeGroup);
+    let cubies = [];
+    const CELL=1, STICKER=.92, GAP=.04;
+
+    /* SWAPPED RED/ORANGE (visual only) */
+    const COLORS={ U:0xffd500, D:0xffffff, L:0xcc0000, R:0xff8c1a, F:0x00a040, B:0x0040cc };
+
+    function mkCubie(i,j,k){
+      const core = new THREE.Mesh(
+        new THREE.BoxGeometry(STICKER,STICKER,STICKER),
+        new THREE.MeshStandardMaterial({color:0x111317,roughness:.9})
+      );
+      const g=new THREE.Group(); g.add(core); g.position.set(i*CELL,j*CELL,k*CELL);
+      const faces=[
+        { key:'R', show:i=== 1, n:new THREE.Vector3( 1,0,0)},
+        { key:'L', show:i===-1, n:new THREE.Vector3(-1,0,0)},
+        { key:'U', show:j=== 1, n:new THREE.Vector3( 0,1,0)},
+        { key:'D', show:j===-1, n:new THREE.Vector3( 0,-1,0)},
+        { key:'F', show:k=== 1, n:new THREE.Vector3( 0,0,1)},
+        { key:'B', show:k===-1, n:new THREE.Vector3( 0,0,-1)},
+      ];
+      const pg=new THREE.PlaneGeometry(STICKER-GAP,STICKER-GAP);
+      faces.forEach(f=>{
+        if(!f.show) return;
+        const s=new THREE.Mesh(pg,new THREE.MeshBasicMaterial({color:COLORS[f.key]}));
+        s.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), f.n);
+        s.position.copy(f.n).multiplyScalar(STICKER/2+0.001);
+        g.add(s);
+      });
+      cubeGroup.add(g); cubies.push(g);
+    }
+    function buildSolved(){
+      cubies.length=0; cubeGroup.clear();
+      for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++) for(let k=-1;k<=1;k++) mkCubie(i,j,k);
+    }
+    buildSolved();
+
+    /* ---------- Orbit/zoom (Shift+LMB or RMB) ---------- */
+    let orbit=false, px=0, py=0;
+    canvas.addEventListener('contextmenu',e=>e.preventDefault(), {passive:false});
+    canvas.addEventListener('pointerdown',e=>{
+      if (e.pointerType!=='mouse') return;
+      if (e.button===2 || (e.button===0 && e.shiftKey)) { orbit=true; px=e.clientX; py=e.clientY; }
+    }, {passive:false});
+    canvas.addEventListener('pointerup',()=>{ orbit=false; }, {passive:false});
+    canvas.addEventListener('pointerleave',()=>{ orbit=false; }, {passive:false});
+    canvas.addEventListener('pointermove',e=>{
+      if(!orbit) return;
+      const dx=e.clientX-px, dy=e.clientY-py; px=e.clientX; py=e.clientY;
+      const sp=0.005, target=new THREE.Vector3(0,0,0);
+      const offset=camera.position.clone().sub(target);
+      offset.applyAxisAngle(new THREE.Vector3(0,1,0), -dx*sp);
+      const view = target.clone().sub(camera.position).normalize();
+      let right = new THREE.Vector3().crossVectors(view, new THREE.Vector3(0,1,0));
+      if (right.lengthSq()<1e-8) right=new THREE.Vector3(1,0,0); else right.normalize();
+      offset.applyAxisAngle(right, -dy*sp);
+      camera.position.copy(target.clone().add(offset)); camera.lookAt(target);
+    }, {passive:false});
+    window.addEventListener('wheel',e=>{
+      camera.position.multiplyScalar(1+Math.sign(e.deltaY)*.08).clampLength(4,40);
+    }, {passive:true});
+
+    /* ---------- Picking helpers ---------- */
+    const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+    const AX={x:new THREE.Vector3(1,0,0),y:new THREE.Vector3(0,1,0),z:new THREE.Vector3(0,0,1)};
+    const toNDC=e=>{ const r=canvas.getBoundingClientRect(); ndc.x=((e.clientX-r.left)/r.width)*2-1; ndc.y=-((e.clientY-r.top)/r.height)*2+1; };
+    function camBasis(){
+      const fwd=new THREE.Vector3(); camera.getWorldDirection(fwd);
+      const right=new THREE.Vector3().crossVectors(fwd,camera.up).normalize().negate();
+      const up=new THREE.Vector3().crossVectors(right,fwd).normalize();
+      return {right,up};
+    }
+    function pick(e){
+      toNDC(e); ray.setFromCamera(ndc,camera);
+      const hit=ray.intersectObjects(cubeGroup.children,true)[0]; if(!hit) return null;
+      let root=hit.object; while(root && root.parent!==cubeGroup) root=root.parent;
+      const n = hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
+                         : new THREE.Vector3(0,0,1).applyQuaternion(hit.object.getWorldQuaternion(new THREE.Quaternion()));
+      return {cubie:root, normal:n.normalize()};
+    }
+    const layerIndex=(cubie,axis)=>{ const p=cubie.position; const v=axis==='x'?p.x:axis==='y'?p.y:p.z; return Math.max(-1,Math.min(1,Math.round(v))); };
+
+    /* ---------- Notation helpers ---------- */
+    function moveName(axis,layer,sign){
+      const s=-sign; // visible CW = non-prime
+      if(axis==='x'){ if(layer=== 1) return s>0?'R':"R'"; if(layer===-1) return s>0?"L'":'L'; return s>0?"M'":'M'; }
+      if(axis==='y'){ if(layer=== 1) return s>0?'U':"U'"; if(layer===-1) return s>0?"D'":'D'; return s>0?"E'":'E'; }
+      if(axis==='z'){ if(layer=== 1) return s>0?'F':"F'"; if(layer===-1) return s>0?"B'":'B'; return s>0?'S':"S'"; }
+      return '?';
+    }
+    function baseName(axis,layer){
+      if(axis==='x'){ if(layer=== 1) return 'R'; if(layer===-1) return 'L'; return 'M'; }
+      if(axis==='y'){ if(layer=== 1) return 'U'; if(layer===-1) return 'D'; return 'E'; }
+      if(axis==='z'){ if(layer=== 1) return 'F'; if(layer===-1) return 'B'; return 'S'; }
+      return '?';
+    }
+    const invertLabel = (lbl)=> lbl.endsWith("2") ? lbl : (lbl.endsWith("'") ? lbl.slice(0,-1) : lbl+"'");
+
+    /* ---------- Metrics ---------- */
+    const movesBox=document.getElementById('moves');
+    const persistBox=document.getElementById('persistMoves');
+    const metrics={
+      movesEl:document.getElementById('m-moves'),
+      durEl:document.getElementById('m-duration'),
+      tpsEl:document.getElementById('m-tps'),
+      pauseTotEl:document.getElementById('m-pause-total'),
+      pauseMaxEl:document.getElementById('m-pause-max')
+    };
+    const fmtMs=(n)=> n<=0?'0 ms':(n<1000?`${Math.round(n)} ms`:`${(n/1000).toFixed(2)} s`);
+
+    let moveLog=[];          // logged moves (order)
+    const redoStack=[];      // undone moves waiting to be redone
+
+    // ---- Analytics event log ----
+    const events = [];
+    function logEvent(type, data={}){
+      const nowPerf = performance.now();
+      const nowWall = Date.now();
+      events.push({ type, atMs: nowPerf, at: new Date(nowWall).toISOString(), ...data });
+    }
+
+    const rec={
+      list:[],curStart:0,wallStart:0,armed:false,
+      begin(){ this.curStart=performance.now(); this.wallStart=Date.now(); this.armed=true; },
+      end(label){
+        const now=performance.now(); const nowWall=Date.now();
+        const tStart=this.armed?(this.curStart||now):now;
+        const wStart=this.armed?(this.wallStart||nowWall):nowWall;
+        this.list.push({tStart, tEnd:now, wallStart:wStart, wallEnd:nowWall, label});
+        this.armed=false; updateMetrics();
+      },
+      abort(){ this.armed=false; },
+      resetTimer(){ this.list.length=0; this.curStart=0; this.armed=false; updateMetrics(); },
+      clear(){ this.list.length=0; this.curStart=0; this.armed=false; updateMetrics(); }
+    };
+    function updateMetrics(){
+      const L=rec.list, n=L.length;
+      let dur=0, pauseTot=0, pauseMax=0;
+      if(n){
+        dur = Math.max(0, L[n-1].tEnd - L[0].tStart);
+        for(let i=1;i<n;i++){ const p=Math.max(0, L[i].tStart - L[i-1].tEnd); pauseTot+=p; if(p>pauseMax) pauseMax=p; }
+      }
+      const tps=(n>1&&dur>0)?(n-1)/(dur/1000):0;
+      metrics.movesEl.textContent=n; metrics.durEl.textContent=fmtMs(dur);
+      metrics.tpsEl.textContent=tps.toFixed(2); metrics.pauseTotEl.textContent=fmtMs(pauseTot);
+      metrics.pauseMaxEl.textContent=fmtMs(pauseMax);
+    }
+    function mkBadge(txt){ const s=document.createElement('span'); s.className='badge'; s.textContent=txt; return s; }
+    function addBadgeBoth(txt){
+      movesBox.appendChild(mkBadge(txt)); persistBox.appendChild(mkBadge(txt));
+      movesBox.scrollTop=movesBox.scrollHeight; persistBox.scrollTop=persistBox.scrollHeight;
+    }
+    function addBadgeMoves(txt){
+      movesBox.appendChild(mkBadge(txt));
+      movesBox.scrollTop = movesBox.scrollHeight;
+    }
+    const clearSidebarMovesOnly = () => { moveLog=[]; movesBox.innerHTML=''; };
+    const clearMoves = () => { moveLog=[]; movesBox.innerHTML=''; rec.clear(); logEvent('moves_cleared'); };
+    const clearMovesViewOnly = () => { movesBox.innerHTML=''; logEvent('moves_view_reset'); };
+
+    /* ---------- Animation + guard ---------- */
+    let turning=false, busyUntil=0;
+    const COOLDOWN_MS=20;
+    const isBusy = () => turning || performance.now() < busyUntil;
+    const guard = (fn) => () => { if (isBusy()) return; fn(); };
+
+    function bakeFromPivot(pivot,sel){
+      pivot.updateMatrixWorld(true);
+      for(const c of sel){
+        cubeGroup.attach(c);
+        c.position.set(Math.round(c.position.x),Math.round(c.position.y),Math.round(c.position.z));
+      }
+      cubeGroup.remove(pivot);
+    }
+
+    const speedInput=document.getElementById('speed');
+    const toAnimMs=spd=>Math.max(50, 240 - spd*5);
+    let ANIM_MS=toAnimMs(+speedInput.value);
+
+    // Theme-flexible slider fill 
+    function paintRange(el){
+      const min=+el.min||0, max=+el.max||100, val=+el.value;
+      const pct = ((val-min)/(max-min))*100;
+      el.style.setProperty('--p', pct+'%');
+    }
+    paintRange(speedInput);
+    speedInput.addEventListener('input',(e)=>{
+      ANIM_MS=toAnimMs(+e.target.value);
+      paintRange(e.target);
+      updateStepButtons();
+    });
+
+    // Step buttons + state sync
+    const btnStepF = document.getElementById('btn-step-fwd');
+    const btnStepB = document.getElementById('btn-step-back');
+    function updateStepButtons(){
+      btnStepF.disabled = turning || player.idxStepF >= player.forwardActions.length;
+      btnStepB.disabled = turning || player.idxStepR >= player.reverseActions.length;
+    }
+
+    function animateTo(pivot, axisVec, start, target, sel, done){
+      turning=true;
+      updateStepButtons();
+      const dur=ANIM_MS, t0=performance.now();
+      const tick=t=>{
+        const k=Math.min(1,(t-t0)/dur), ang=start+(target-start)*k;
+        pivot.setRotationFromAxisAngle(axisVec, ang); renderer.render(scene,camera);
+        if(k<1) requestAnimationFrame(tick);
+        else {
+          bakeFromPivot(pivot,sel);
+          turning=false; busyUntil = performance.now() + COOLDOWN_MS;
+          updateStepButtons();
+          done&&done();
+        }
+      };
+      requestAnimationFrame(tick);
+    }
+
+    function rotateLayer(axis, layer, sign, logPayload, after){
+      const sel=[];
+      for(const c of cubies){
+        const v=axis==='x'?c.position.x:axis==='y'?c.position.y:c.position.z;
+        if(Math.round(v)===layer) sel.push(c);
+      }
+      const pivot=new THREE.Group(); cubeGroup.add(pivot); sel.forEach(c=>pivot.attach(c));
+      animateTo(pivot, AX[axis], 0, sign*(Math.PI/2), sel, ()=>{
+        if(logPayload){
+          if (logPayload.src !== 'undo' && logPayload.src !== 'redo') redoStack.length = 0;
+
+          moveLog.push({
+            axis,layer,sign:logPayload.sign,label:logPayload.label,reps:logPayload.reps||1,
+            src: logPayload.src || 'script'
+          });
+
+          if (logPayload.src === 'redo') {
+            addBadgeMoves(logPayload.label);
+          } else {
+            addBadgeBoth(logPayload.label);
+          }
+
+          rec.end(logPayload.label);
+        }
+        after&&after();
+      });
+    }
+
+    function rotateAction(action, done){
+      const {axis,layer,sign,reps=1,label,src,noLog} = action;
+      if(reps<=1){
+        rotateLayer(axis,layer,sign, noLog ? false : {label,axis,layer,sign,reps:1,src:src||'script'}, done);
+      }else{
+        let count=0;
+        const step=()=>{
+          if(count+1<reps){
+            rotateLayer(axis,layer,sign,false, ()=>{ count++; step(); });
+          }else{
+            rotateLayer(axis,layer,sign, noLog ? false : {label,axis,layer,sign,reps,src:src||'script'}, ()=>{ count++; done&&done(); });
+          }
+        };
+        step();
+      }
+    }
+
+    /* ---------- Touch drag twists (manual turns) ---------- */
+    const drag={active:false,sx:0,sy:0,picked:null,axis:null,layer:0,pivot:null,sel:[],plus:null,angle:0};
+    const AXIS_LOCK_PX2_FACE=6, AXIS_LOCK_PX2_SLICE=3;
+    const SNAP_FRAC_FACE=0.10, SNAP_FRAC_SLICE=0.08;
+    const HALF_THRESH=0.75;
+    const rayTmp=new THREE.Vector3();
+    let activePointerId = null;
+
+    function canStartGesture(e){
+      if (isBusy()) return false;
+      if (activePointerId !== null && activePointerId !== e.pointerId) return false;
+      return true;
+    }
+    function takePointer(e){ activePointerId = e.pointerId; try{ canvas.setPointerCapture(e.pointerId);}catch{} }
+    function releasePointer(e){ try{ canvas.releasePointerCapture(e.pointerId);}catch{} if (activePointerId===e.pointerId) activePointerId=null; }
+
+    function camBasisVec(dx,dy){ const {right,up}=camBasis(); return rayTmp.set(0,0,0).addScaledVector(right,dx).addScaledVector(up,-dy).normalize(); }
+
+    canvas.addEventListener('pointerdown',e=>{
+      if (e.pointerType === 'touch') e.preventDefault();
+      if (e.shiftKey && e.pointerType==='mouse') return;
+      if(e.pointerType==='mouse' && e.button!==0) return;
+      if(!canStartGesture(e)) return;
+      const info=pick(e); if(!info) return;
+      takePointer(e);
+      drag.active=true; drag.sx=e.clientX; drag.sy=e.clientY; drag.picked=info; drag.axis=null; drag.angle=0;
+      rec.begin();
+    }, {passive:false});
+
+    canvas.addEventListener('pointermove',e=>{
+      if (activePointerId !== null && e.pointerId !== activePointerId) return;
+      if(!drag.active || isBusy()) return;
+      if (e.pointerType === 'touch') e.preventDefault();
+
+      const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy, d2=dx*dx+dy*dy;
+      if(!drag.axis){
+        const n=drag.picked.normal;
+        const cand=Math.abs(n.x)>0.8?['y','z']:Math.abs(n.y)>0.8?['x','z']:['x','y'];
+        const v = camBasisVec(dx,dy);
+        let axis=cand[0],best=-1; for(const a of cand){ const s=Math.abs(v.dot(AX[a])); if(s>best){best=s; axis=a;}}
+        const layerGuess=layerIndex(drag.picked.cubie, axis);
+        const need=(layerGuess===0?AXIS_LOCK_PX2_SLICE:AXIS_LOCK_PX2_FACE);
+        if(d2<need) return;
+        drag.axis=axis; drag.layer=layerGuess;
+        const sel=[]; for(const c of cubies){ const vv=axis==='x'?c.position.x:axis==='y'?c.position.y:c.position.z; if(Math.round(vv)===drag.layer) sel.push(c); }
+        const pivot=new THREE.Group(); cubeGroup.add(pivot); sel.forEach(c=>pivot.attach(c));
+        drag.sel=sel; drag.pivot=pivot; drag.plus=new THREE.Vector3().crossVectors(n, AX[axis]).normalize();
+      }
+      const dragWorld=camBasisVec(dx,dy);
+      const signed=dragWorld.dot(drag.plus);
+      const target=THREE.MathUtils.clamp(signed*Math.PI, -3.2, 3.2);
+      drag.angle=target;
+      drag.pivot.setRotationFromAxisAngle(AX[drag.axis], target);
+      renderer.render(scene,camera);
+    }, {passive:false});
+
+    function commitOrCancelSnap(){
+      const q=Math.PI/2, h=Math.PI;
+      const frac=(drag.layer===0?SNAP_FRAC_SLICE:SNAP_FRAC_FACE);
+      const a=Math.abs(drag.angle);
+      if(a < q*frac){
+        animateTo(drag.pivot, AX[drag.axis], drag.angle, 0, drag.sel, ()=>{ rec.abort(); updateMetrics(); });
+      }else{
+        let snap, reps, sign, label;
+        if(a >= Math.PI*HALF_THRESH){
+          snap = (drag.angle>0 ? h : -h); reps=2; label = baseName(drag.axis,drag.layer) + '2'; sign = drag.angle>0?+1:-1;
+        }else{
+          snap = (drag.angle>0 ? q : -q); reps=1; label = moveName(drag.axis,drag.layer, drag.angle>0?+1:-1); sign = drag.angle>0?+1:-1;
+        }
+        animateTo(drag.pivot, AX[drag.axis], drag.angle, snap, drag.sel, ()=>{
+          moveLog.push({axis:drag.axis,layer:drag.layer,sign,label,reps, src:'manual'});
+          redoStack.length = 0; 
+          addBadgeBoth(label); rec.end(label);
+        });
+      }
+      drag.pivot=null; drag.sel=[]; drag.axis=null; drag.picked=null; drag.active=false;
+    }
+
+    canvas.addEventListener('pointerup',e=>{
+      if (e.pointerId !== activePointerId) return;
+      if(!drag.active){ releasePointer(e); return; }
+      if(!drag.axis){ rec.abort(); updateMetrics(); drag.active=false; drag.picked=null; releasePointer(e); return; }
+      commitOrCancelSnap(); releasePointer(e);
+    }, {passive:false});
+
+    canvas.addEventListener('pointercancel',e=>{
+      if (e.pointerId !== activePointerId) return;
+      if (drag.active && drag.axis){
+        animateTo(drag.pivot, AX[drag.axis], drag.angle, 0, drag.sel, ()=>{ rec.abort(); updateMetrics(); });
+      } else { rec.abort(); updateMetrics(); }
+      drag.pivot=null; drag.sel=[]; drag.axis=null; drag.picked=null; drag.active=false;
+      releasePointer(e);
+    }, {passive:false});
+
+    /* ---------- Scramble ---------- */
+    const SCR_FACES=['U','D','L','R','F','B'];
+    const SCR_SUFFIX=['',"'",'2'];
+    const scrambleBox=document.getElementById('scramble');
+
+    function genScramble(n=20){
+      const out=[]; let lastAxis=-1;
+      while(out.length<n){
+        const f = SCR_FACES[(Math.random()*6)|0];
+        const axis = (f==='U'||f==='D')?0:(f==='L'||f==='R')?1:2;
+        if(axis===lastAxis) continue;
+        const s = SCR_SUFFIX[(Math.random()*3)|0];
+        out.push(f+s); lastAxis=axis;
+      }
+      return out;
+    }
+    function setScrambleText(arr){ scrambleBox.textContent = arr.length?arr.join(' '):'(none)'; }
+
+    const invertToken = (tok)=> tok.endsWith("2") ? tok : (tok.endsWith("'") ? tok.slice(0,-1) : tok+"'");
+
+    function parseToken(tok){
+      const base = tok.replace(/['2]/g,''); const suf = tok.slice(base.length);
+      let axis, layer, sign;
+      if(base==='R'){ axis='x'; layer=+1; sign=+1; }
+      else if(base==='L'){ axis='x'; layer=-1; sign=-1; }
+      else if(base==='U'){ axis='y'; layer=+1; sign=+1; }
+      else if(base==='D'){ axis='y'; layer=-1; sign=-1; }
+      else if(base==='F'){ axis='z'; layer=+1; sign=+1; }
+      else if(base==='B'){ axis='z'; layer=-1; sign=-1; }
+      else return null;
+      if(suf==="'") sign*=-1;
+      const reps = (suf==='2')?2:1;
+      return {axis, layer, sign, reps, label: tok};
+    }
+    const compile = (tokens)=> tokens.map(parseToken).filter(Boolean);
+    const compileInverse = (tokens)=> compile(tokens.slice().reverse().map(invertToken));
+
+    const player = {
+      baseScramble: [], forwardActions: [], reverseActions: [],
+      running:false, paused:false, dir:+1, idxAuto:0, idxStepF:0, idxStepR:0,
+      setBase(scr){
+        this.baseScramble=scr.slice();
+        this.forwardActions=compile(this.baseScramble).map(a=>({...a, src:'player'}));
+        this.reverseActions=compileInverse(this.baseScramble).map(a=>({...a, src:'player_reverse'}));
+        this.stop(); this.idxStepF=0; this.idxStepR=0; updateStepButtons();
+      },
+      playForward: guard(function(){ player.dir=+1; player.idxAuto=0; player.running=true; player.paused=false; logEvent('play'); updateStepButtons(); player._tick(); }),
+      playReverse: guard(function(){ player.dir=-1; player.idxAuto=0; player.running=true; player.paused=false; logEvent('play_reverse'); updateStepButtons(); player._tick(); }),
+      pause(){ this.paused=true; logEvent('pause'); updateStepButtons(); },
+      resume: guard(function(){
+        if(!player.running){ player.idxAuto=0; player.running=true; player.paused=false; logEvent('resume_cold'); }
+        else { player.paused=false; logEvent('resume'); }
+        updateStepButtons(); player._tick();
+      }),
+      stop(){ this.running=false; this.paused=false; this.idxAuto=0; logEvent('stop'); updateStepButtons(); },
+      _tick(){
+        if(!this.running || this.paused) return;
+        if(isBusy()){ setTimeout(()=>this._tick(), 20); return; }
+        const acts = this.dir>0 ? this.forwardActions : this.reverseActions;
+        if(this.idxAuto >= acts.length){ this.running=false; updateStepButtons(); return; }
+        const act = acts[this.idxAuto++]; rec.begin(); rotateAction(act, ()=>{ this._tick(); });
+      },
+      stepForward: guard(function(){
+        const base = player.forwardActions[player.idxStepF];
+        if (!base) { updateStepButtons(); return; }
+        player.idxStepF++;
+        const act = { ...base, src:'player_step_forward' };
+        logEvent('step_forward');
+        rec.begin();
+        rotateAction(act, ()=>{ updateStepButtons(); });
+      }),
+      stepBackward: guard(function(){
+        const base = player.reverseActions[player.idxStepR];
+        if (!base) { updateStepButtons(); return; }
+        player.idxStepR++;
+        const act = { ...base, src:'player_step_backward' };
+        logEvent('step_backward');
+        rec.begin();
+        rotateAction(act, ()=>{ updateStepButtons(); });
+      })
+    };
+
+    /* ---------- UI ---------- */
+    let currentScramble = [];
+    function regenerate(n=20){
+      currentScramble = genScramble(n);
+      player.setBase(currentScramble);
+      setScrambleText(currentScramble);
+      logEvent('scramble_generated', { scramble: currentScramble.join(' ') });
+    }
+    regenerate(20);
+
+    document.getElementById('btn-gen').addEventListener('click', ()=> { regenerate(20); updateStepButtons(); });
+    document.getElementById('btn-play').addEventListener('click', ()=> player.playForward());
+    document.getElementById('btn-play-rev').addEventListener('click', ()=> player.playReverse());
+    document.getElementById('btn-pause').addEventListener('click', ()=> player.pause());
+    document.getElementById('btn-resume').addEventListener('click', ()=> player.resume());
+    document.getElementById('btn-step-fwd').addEventListener('click', ()=> player.stepForward());
+    document.getElementById('btn-step-back').addEventListener('click', ()=> player.stepBackward());
+
+    document.getElementById('btn-reset').addEventListener('click', guard(()=>{
+      player.stop(); buildSolved(); clearSidebarMovesOnly();
+      resetView(); 
+      logEvent('cube_reset'); updateStepButtons();
+    }));
+
+    // Tutorial button
+    document.getElementById('btn-tutorial').addEventListener('click', ()=>{
+      if (!splash.isConnected) document.body.appendChild(splash);
+      showSplash('Loading Interactive Tutorial…');
+      setTimeout(()=>{ window.location.href='tutorial-intro.html'; }, 600);
+    });
+
+    // View-only reset for Moves list
+    document.getElementById('btn-reset-moves-view').addEventListener('click', clearMovesViewOnly);
+
+    document.getElementById('btn-clear').addEventListener('click', ()=> { clearMoves(); updateStepButtons(); });
+
+    // ----- Undo (label-driven; fixes manual swipe freeze) -----
+    function actionFromLabel(lbl){
+      let reps = 1;
+      const base = lbl.replace(/['2]/g,'');
+      const suf = lbl.slice(base.length);
+      if (suf === '2') reps = 2;
+
+      let axis, layer, sign;
+      switch(base){
+        case 'R': axis='x'; layer=+1; sign = (suf==="'")?-1:+1; break;
+        case 'L': axis='x'; layer=-1; sign = (suf==="'")?+1:-1; break;
+        case 'U': axis='y'; layer=+1; sign = (suf==="'")?-1:+1; break;
+        case 'D': axis='y'; layer=-1; sign = (suf==="'")?+1:-1; break;
+        case 'F': axis='z'; layer=+1; sign = (suf==="'")?-1:+1; break;
+        case 'B': axis='z'; layer=-1; sign = (suf==="'")?+1:-1; break;
+        case 'M': axis='x'; layer=0;  sign = (suf==="'")?-1:+1; break; // keep as-is
+        case 'E': axis='y'; layer=0;  sign = (suf==="'")?-1:+1; break; // keep as-is
+        case 'S': axis='z'; layer=0;  sign = (suf==="'")?-1:+1; break;
+        default: return null;
+      }
+      if (base!=='M' && base!=='E') sign *= -1; // visual clockwise mapping
+      return {axis, layer, sign, reps, label: lbl};
+    }
+
+    document.getElementById('btn-undo').addEventListener('click', guard(()=>{
+      if(moveLog.length===0) return;
+      const last = moveLog.pop();
+      const invLabel = invertLabel(last.label);
+      const invAction = actionFromLabel(invLabel);
+      if(!invAction){ return; }
+
+      // push original to redo stack
+      redoStack.push(last);
+
+      // begin telemetry for undo (counts toward time/TPS)
+      rec.begin();
+
+      // run inverse WITHOUT logging to Moves (noLog:true)
+      rotateAction({ ...invAction, src:'undo', noLog:true }, ()=>{
+        // remove last Moves badge
+        const badges = movesBox.querySelectorAll('.badge');
+        if(badges.length) badges[badges.length-1].remove();
+
+        // log to Persistent Moves as a regular move
+        try {
+          if (typeof persistBox !== 'undefined' && persistBox && typeof mkBadge === 'function') {
+            persistBox.appendChild(mkBadge(invLabel));
+            persistBox.scrollTop = persistBox.scrollHeight;
+          }
+        } catch(e){ /* non-fatal */ }
+
+        // end telemetry with the inverse label (counts as a move)
+        rec.end(invLabel);
+
+        logEvent('undo', { label: last.label });
+        updateStepButtons();
+      });
+    }));
+
+    // ----- Redo (label-driven) -----
+    document.getElementById('btn-redo').addEventListener('click', guard(()=>{
+      if(redoStack.length===0) return;
+      const again = redoStack.pop(); // original move object
+      const act = actionFromLabel(again.label);
+      if(!act) return;
+      rec.begin();
+      rotateAction({ ...act, src:'redo', noLog:false }, ()=>{
+        // ensure Persistent ticker logs redo as a regular move
+        try {
+          if (typeof persistBox !== 'undefined' && persistBox && typeof mkBadge === 'function') {
+            persistBox.appendChild(mkBadge(again.label));
+            persistBox.scrollTop = persistBox.scrollHeight;
+          }
+        } catch(e){ /* non-fatal */ }
+        logEvent('redo', { label: again.label });
+      });
+    }));
+
+    document.getElementById('btn-reset-timer').addEventListener('click', ()=> { rec.resetTimer(); logEvent('timer_reset'); });
+
+    /* ---------- Move Picker keyboard wiring ---------- */
+    const moveGrid = document.getElementById('moveGrid');
+
+    function pickerActionFromLabel(lbl){
+      const a = actionFromLabel(lbl);
+      return a ? { ...a, src:'picker' } : null;
+    }
+
+    function makeBtn(lbl){
+      const b=document.createElement('button');
+      b.className='btn-key';
+      b.type='button';
+      b.textContent=lbl;
+      b.title=lbl;
+      b.addEventListener('click', guard(()=>{
+        const act = pickerActionFromLabel(lbl);
+        if(!act) return;
+        rec.begin();
+        rotateAction(act, ()=>{});
+      }));
+      return b;
+    }
+
+    const labels = ["R","R'","U","U'","F","F'","L","L'","D","D'","B","B'","M","M'","E","E'","S","S'"];
+    labels.forEach(m=> moveGrid.appendChild(makeBtn(m)));
+
+    /* ---------- Export Notes (.txt) ---------- */
+    function downloadTXT(text, filename){
+      const blob = new Blob([text], {type:'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function formatNotes(){
+      const movesMerged = rec.list.map((m,i)=>{
+        const src = moveLog[i]?.src ?? null;
+        const axis= moveLog[i]?.axis ?? null;
+        const layer= moveLog[i]?.layer ?? null;
+        const sign= moveLog[i]?.sign ?? null;
+        const reps= moveLog[i]?.reps ?? 1;
+        return {
+          index:i, label:m.label, source:src, axis, layer, sign, reps,
+          tStartMs: m.tStart, tEndMs: m.tEnd, dtMs: m.tEnd - m.tStart,
+          wallStartISO: new Date(m.wallStart).toISOString(),
+          wallEndISO: new Date(m.wallEnd).toISOString()
+        };
+      });
+
+      const meta = {
+        version: 'erno-0.4',
+        createdAt: new Date().toISOString(),
+        themeId: loadThemeId(),
+        speed: +speedInput.value,
+        canvas: { w: stage.clientWidth, h: stage.clientHeight },
+        scramble: currentScramble.join(' ')
+      };
+
+      const header = [
+        'Erno AI — Session Notes',
+        '=======================',
+        `Created:     ${meta.createdAt}`,
+        `Theme:       ${meta.themeId}`,
+        `Speed:       ${meta.speed}`,
+        `Canvas:      ${meta.canvas.w}×${meta.canvas.h}`,
+        `Scramble:    ${meta.scramble || '(none)'}`,
+        ''
+      ].join('\n');
+
+      const movesTxt = [
+        'Moves:',
+        '------',
+        ...(movesMerged.length
+           ? movesMerged.map(m =>
+              `#${String(m.index).padStart(3,'0')}  ${m.label}  [src=${m.source ?? 'manual/unknown'}]  ` +
+              `t=${m.tStartMs.toFixed(1)}→${m.tEndMs.toFixed(1)} ms (Δ=${m.dtMs.toFixed(1)} ms)  ` +
+              `axis=${m.axis ?? '-'} layer=${m.layer ?? '-'} sign=${m.sign ?? '-'} reps=${m.reps}`
+             )
+           : ['(none)']),
+        ''
+      ].join('\n');
+
+      const eventsTxt = [
+        'Events:',
+        '-------',
+        ...(events.length
+           ? events.map(e => `${e.at}  ${e.type} ${e.scramble?('['+e.scramble+']'):''}`)
+           : ['(none)']),
+        ''
+      ].join('\n');
+
+      return [header, movesTxt, eventsTxt].join('\n');
+    }
+
+    document.getElementById('btn-export-txt').addEventListener('click', ()=>{
+      const notes = formatNotes();
+      downloadTXT(notes, `erno-session-${Date.now()}.txt`);
+    });
+
+    /* ---------- Render ---------- */ 
+    (function loop(){ renderer.render(scene,camera); requestAnimationFrame(loop); })();
+
+    // initial sync
+    updateStepButtons();
+  })();
+  </script>
+</body>
+</html>

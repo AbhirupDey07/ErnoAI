@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Erno AI — Interactive Tutorial • Intro</title>
+<style>
+  :root{
+    --bg:#0b0c10; --panel:#121420; --ink:#e8eefc; --muted:#92a0b8; --line:#1b2133; --splashA:#11182a;
+    --card:#0d1222; --btn:#16233e; --btnBorder:#22325a;
+  }
+
+  a {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-size: inherit;       /* match surrounding text size */
+  font-weight: 500;         /* adjust if you want boldness */
+  color: var(--accent);     /* ties into your theme */
+  text-decoration: none;    /* remove underline by default */
+}
+
+a:hover {
+  text-decoration: underline;
+  filter: brightness(1.1);  /* slight hover feedback */
+}
+
+
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{max-width:min(920px,92vw);margin:40px auto 80px;padding:0 10px}
+  h1{font-size:28px;margin:0 0 4px 0}
+  h2{margin:24px 0 8px}
+  p{color:var(--ink);opacity:.95}
+  .muted{color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button{background:var(--btn);border:1px solid var(--btnBorder);color:var(--ink);border-radius:10px;padding:.55rem .8rem;font-weight:800;cursor:pointer;transition:filter .15s ease}
+  button:hover{filter:brightness(1.07)}
+  #brand{position:fixed;left:50%;top:12px;transform:translateX(-50%);font-weight:800;font-size:18px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.4rem .6rem;backdrop-filter:blur(2px)}
+
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+  .kpi .card h3{margin:0 0 4px 0;font-size:16px}
+  .kpi .big{font-size:20px;font-weight:800}
+  .sources{font-size:12px;color:var(--muted);margin-top:12px}
+  .sources a{color:var(--muted);text-decoration:underline}
+
+  /* Splash (page transitions) */
+  #splash{
+    position:fixed; inset:0; display:grid; place-items:center;
+    background:radial-gradient(1200px 800px at 50% 30%, var(--splashA) 0%, var(--bg) 60%);
+    color:var(--ink); z-index:9999; transition:.4s;
+  }
+  #splash.hide{opacity:0;visibility:hidden}
+  #splash .inner{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.35);border-top-color:var(--ink);animation:spin .9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+  <div id="splash">
+    <div class="inner">
+      <h1>Erno AI<span class="muted" style="display:block;margin-top:6px">Loading Interactive Tutorial…</span></h1>
+      <div class="spinner" aria-hidden="true"></div>
+    </div>
+  </div>
+  <div id="brand">Erno AI: Interactive Tutorial</div>
+
+  <div class="wrap">
+    <h1>Welcome! What even <i>is</i> this cube?</h1>
+    <p class="muted">A quick tour: origin, rise, comps, world records, and how big the cube world actually is today.</p>
+
+    <div class="card">
+      <h2>Origins</h2>
+      <p>Invented in <b>1974</b> by Hungarian architect <b>Ernő Rubik</b>; first sold locally in 1977 and worldwide from 1980. It exploded into pop culture and remains the best-selling puzzle toy ever.</p>
+    </div>
+
+    <div class="kpi" style="margin-top:10px">
+      <div class="card">
+        <h3>All-time units sold</h3>
+        <div class="big">~500,000,000+</div>
+        <div class="muted" style="font-size:12px">Across official Rubik’s & third-party brands (directional).</div>
+      </div>
+      <div class="card">
+        <h3>Official brand (recent year)</h3>
+        <div class="big">≈5–6M units</div>
+        <div class="muted" style="font-size:12px">Rubik’s brand sell-in varies by year/source.</div>
+      </div>
+      <div class="card">
+        <h3>Competitions (recent year)</h3>
+        <div class="big">~2,500–2,700 events</div>
+        <div class="muted" style="font-size:12px">~100 countries; tens of thousands of competitors.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:10px">
+      <h2>World Records (WCA — 3×3)</h2>
+      <ul>
+        <li><b>Single:</b> <b>3.05 s</b> — <i>Xuanyi Geng</i>, Shenyang Spring 2025 (<a href="https://www.worldcubeassociation.org/competitions/ShenyangSpring2025" target="_blank" rel="noopener">WCA</a>, <a href="https://www.worldcubeassociation.org/persons/2023GENG02" target="_blank" rel="noopener">profile</a>)</li>
+        <li><b>Average of 5:</b> <b>3.90 s</b> — <i>Yiheng Wang</i>, Taizhou Open 2025 (<a href="https://www.worldcubeassociation.org/competitions/TaizhouOpen2025" target="_blank" rel="noopener">WCA</a>, <a href="https://www.worldcubeassociation.org/persons/2019wany36" target="_blank" rel="noopener">profile</a>)</li>
+      </ul>
+      <p class="muted">Times above are official per WCA; see links for verification and context.</p>
+    </div>
+
+    <div class="card" style="margin-top:10px">
+      <h2>How big is the cube business?</h2>
+      <p>There’s no single official “lifetime revenue” number. Public market write-ups put the <i>annual</i> cube/puzzle segment roughly in the high hundreds of millions to low billions of USD. Treat these as directional.</p>
+      <p>Popular speedcube brands beyond Rubik’s include <b>GAN</b>, <b>MoYu</b>, and <b>QiYi/MoFangGe</b>.</p>
+    </div>
+
+    <div class="row" style="margin-top:14px">
+      <button id="btn-main">Back to Main Page</button>
+      <button id="btn-continue">Continue</button>
+    </div>
+
+    <div class="sources">
+      Info is <b>subject to change</b>. If something’s outdated, please let us know via the email in the <b>Contact/Credits</b> tab in Settings.
+    </div>
+  </div>
+
+  <script>
+    // Theme apply from main app (compute derived vars so buttons follow theme)
+    (function(){
+      const THEMES={
+        default:{v:{bg:'#0b0c10',panel:'#121420',ink:'#e8eefc',muted:'#92a0b8',line:'#1b2133',splashA:'#11182a'}},
+        cream:{v:{bg:'#f4efe6',panel:'#fffaf2',ink:'#2c2a25',muted:'#6b665b',line:'#e1d9c9',splashA:'#efe7d8'}},
+        caramel:{v:{bg:'#2a1f1a',panel:'#3b2b22',ink:'#f8e9d4',muted:'#d9c2a8',line:'#4c3a30',splashA:'#3a2a22'}},
+        cyber:{v:{bg:'#0a0f0a',panel:'#0f1510',ink:'#d5ffd5',muted:'#90c990',line:'#183018',splashA:'#0f1c10'}},
+        nord:{v:{bg:'#2e3440',panel:'#3b4252',ink:'#eceff4',muted:'#c0c8d5',line:'#4c566a',splashA:'#323a49'}},
+        dracula:{v:{bg:'#282a36',panel:'#1e2029',ink:'#f8f8f2',muted:'#b6b6c1',line:'#3b3e4b',splashA:'#2f3140'}},
+        solarDark:{v:{bg:'#002b36',panel:'#073642',ink:'#eee8d5',muted:'#93a1a1',line:'#0b3a46',splashA:'#03313c'}},
+        solarLight:{v:{bg:'#fdf6e3',panel:'#f5efd9',ink:'#073642',muted:'#657b83',line:'#e6dec4',splashA:'#efe8d2'}},
+        catMocha:{v:{bg:'#1e1e2e',panel:'#242437',ink:'#cdd6f4',muted:'#a6adc8',line:'#313244',splashA:'#23233a'}},
+        gruvDark:{v:{bg:'#1d2021',panel:'#282828',ink:'#ebdbb2',muted:'#d5c4a1',line:'#3c3836',splashA:'#232524'}},
+        gruvLight:{v:{bg:'#fbf1c7',panel:'#f2e5bc',ink:'#3c3836',muted:'#7c6f64',line:'#e0d2a4',splashA:'#f5e8bf'}},
+        oneDark:{v:{bg:'#21252b',panel:'#282c34',ink:'#e6efff',muted:'#a0afc1',line:'#323844',splashA:'#252a31'}},
+        synthwave:{v:{bg:'#1b1227',panel:'#231833',ink:'#fedaff',muted:'#d7b6ff',line:'#3a2857',splashA:'#23173a'}},
+        monokai:{v:{bg:'#272822',panel:'#2e2f27',ink:'#f8f8f2',muted:'#c2c2b4',line:'#3b3c34',splashA:'#2c2d26'}},
+        mint:{v:{bg:'#0e1412',panel:'#111a16',ink:'#d9fff2',muted:'#9de5cf',line:'#173026',splashA:'#15231e'}},
+        rosePine:{v:{bg:'#191724',panel:'#1f1d2e',ink:'#e0def4',muted:'#908caa',line:'#2a2837',splashA:'#201e2f'}},
+        highContrast:{v:{bg:'#000000',panel:'#0a0a0a',ink:'#ffffff',muted:'#bfbfbf',line:'#222',splashA:'#101010'}},
+        mono:{v:{bg:'#111114',panel:'#16171a',ink:'#f1f2f5',muted:'#a9acb3',line:'#272a33',splashA:'#1b1c20'}}
+      };
+      function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};}
+      function rgbToHex({r,g,b}){const n=(r<<16)|(g<<8)|b;return'#'+n.toString(16).padStart(6,'0');}
+      function mix(a,b,t){const A=hexToRgb(a),B=hexToRgb(b);return'#'+((1<<24)+Math.round(A.r+(B.r-A.r)*t)*65536+Math.round(A.g+(B.g-A.g)*t)*256+Math.round(A.b+(B.b-A.b)*t)).toString(16).slice(1);}
+      function apply(id){
+        const v=(THEMES[id]||THEMES.default).v, rs=document.documentElement.style;
+        rs.setProperty('--bg',v.bg); rs.setProperty('--panel',v.panel); rs.setProperty('--ink',v.ink);
+        rs.setProperty('--muted',v.muted); rs.setProperty('--line',v.line); rs.setProperty('--splashA',v.splashA||v.panel);
+        rs.setProperty('--card', mix(v.panel, v.bg, 0.15));
+        rs.setProperty('--btn',  mix(v.panel, v.line, 0.25));
+        rs.setProperty('--btnBorder', mix(v.line, v.panel, 0.25));
+      }
+      apply(localStorage.getItem('erno_theme_v1')||'default');
+    })();
+
+    // Splash behavior
+    const splash=document.getElementById('splash');
+    const splashSub = splash.querySelector('.muted');
+    function hideSplash(){ splash.classList.add('hide'); setTimeout(()=>splash.remove(),800); }
+    window.addEventListener('load', ()=> setTimeout(hideSplash, 500));
+
+    document.getElementById('btn-main').addEventListener('click', ()=>{
+      document.body.appendChild(splash);
+      splashSub.textContent="Returning to Main Page…";
+      splash.classList.remove('hide');
+      setTimeout(()=>{ location.href='index.html'; }, 400);
+    });
+    document.getElementById('btn-continue').addEventListener('click', ()=>{
+      document.body.appendChild(splash);
+      splashSub.textContent="Loading Basics…";
+      splash.classList.remove('hide');
+      setTimeout(()=>{ location.href='tutorial-basics.html'; }, 400);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Erno AI — Interactive Tutorial (Basics)</title>
+<style>
+  :root{
+    --bg:#0b0c10; --panel:#121420; --ink:#e8eefc; --muted:#92a0b8; --line:#1b2133; --splashA:#11182a;
+    --card:#0d1222; --btn:#16233e; --btnBorder:#22325a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.56 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+
+  /* removed sticky header; using Intro-style brand + normal H1 */
+
+  /* Intro-style centered brand pill */
+  #brand{
+    position:fixed;left:50%;top:12px;transform:translateX(-50%);
+    font-weight:800;font-size:18px;background:rgba(0,0,0,.35);
+    border:1px solid rgba(255,255,255,.08);border-radius:10px;
+    padding:.4rem .6rem;backdrop-filter:blur(2px);z-index:10;color:var(--ink);
+  }
+
+  main{max-width:980px;margin:56px auto 24px;padding:0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  h1{margin:0 0 10px 0;font-size:22px}
+  h2{margin:14px 0 8px 0;font-size:18px}
+  p,li{color:var(--ink)}
+  .muted{color:var(--muted)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  button{
+    background:var(--btn);border:1px solid var(--btnBorder);color:var(--ink);
+    border-radius:10px;padding:.55rem .8rem;font-weight:800;cursor:pointer
+  }
+  button:hover{filter:brightness(1.07)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+
+  /* Centered splash + spinner */
+  #splash{
+    position:fixed; inset:0; display:grid; place-items:center;
+    background:radial-gradient(1200px 800px at 50% 30%, var(--splashA) 0%, var(--bg) 60%);
+    color:var(--ink); z-index:9999; transition:opacity .5s ease, visibility .5s ease;
+  }
+  #splash.hide{opacity:0;visibility:hidden}
+  #splash .inner{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+  .spinner{width:40px;height:40px;border-radius:50%;border:4px solid rgba(255,255,255,.18);border-top-color:var(--ink);animation:spin .9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  code{font-family:ui-monospace,Consolas,monospace;background:rgba(255,255,255,.06);padding:2px 6px;border-radius:8px;border:1px solid rgba(255,255,255,.08)}
+  details{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  details+details{margin-top:10px}
+  details summary{cursor:pointer;font-weight:800}
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+  ul.tight{margin:6px 0 0 16px}
+</style>
+</head>
+<body>
+  <div id="splash">
+    <div class="inner">
+      <h1>Erno AI: Your Rubik's Cube Coach <span class="muted" id="splash-sub" style="display:block;margin-top:6px">Loading Basics…</span></h1>
+      <div class="spinner" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <!-- Intro-style brand pill -->
+  <div id="brand">Erno AI: Interactive Tutorial</div>
+
+  <main>
+    <!-- Intro-style page title (regular heading, not a gray header bar) -->
+    <h1>Interactive Tutorial — Basics</h1>
+
+    <div class="grid">
+      <div class="card">
+        <h2>How many pieces?</h2>
+        <ul>
+          <li><b>6 centers</b> — fixed orientation, define the face colors.</li>
+          <li><b>12 edges</b> — each has 2 stickers.</li>
+          <li><b>8 corners</b> — each has 3 stickers.</li>
+        </ul>
+        <p class="muted">Centers don’t move relative to each other — they tell you which color belongs on each face.</p>
+      </div>
+
+      <div class="card">
+        <h2>Standard color layout</h2>
+        <p>Common scheme: <b>White</b> opposite <b>Yellow</b>, <b>Green</b> opposite <b>Blue</b>, <b>Red</b> opposite <b>Orange</b>. Brand models may vary slightly; centers define the final solved orientation. More specifically, on a standard 3x3 Rubik's Cube typically goes like this (going clockwise): <br> <b>White bottom, Yellow Top, Blue, Orange, Green, Red</b></p>
+      </div>
+
+      <div class="card">
+        <h2>Notation — complete reference (3×3)</h2>
+        <p class="muted">Clockwise (<code>R</code>) and counter-clockwise (<code>R'</code>) are defined from looking straight at that face. <code>2</code> means 180° (same both directions).<br> You can experiment with this yourself by using the <b> Move Picker </b> keyboard on the simulated cube in the following steps.
+
+        <details open>
+          <summary>Face turns (outer layer)</summary>
+          <div class="cols">
+            <div>
+              <b>Faces:</b>
+              <ul class="tight">
+                <li><code>R R' R2</code> — Right</li>
+                <li><code>L L' L2</code> — Left</li>
+                <li><code>U U' U2</code> — Up</li>
+                <li><code>D D' D2</code> — Down</li>
+                <li><code>F F' F2</code> — Front</li>
+                <li><code>B B' B2</code> — Back</li>
+              </ul>
+            </div>
+            <div>
+              <b>Meaning:</b>
+              <ul class="tight">
+                <li><code>X</code> — 90° clockwise</li>
+                <li><code>X'</code> — 90° counter-clockwise</li>
+                <li><code>X2</code> — 180°</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>Slice turns (middle layers)</summary>
+          <div class="cols">
+            <div>
+              <b>Slices:</b>
+              <ul class="tight">
+                <li><code>M M' M2</code> — between L/R, turns like <b>L</b></li>
+                <li><code>E E' E2</code> — between U/D, turns like <b>D</b></li>
+                <li><code>S S' S2</code> — between F/B, turns like <b>F</b></li>
+              </ul>
+            </div>
+            <div>
+              <b>Notes:</b>
+              <ul class="tight">
+                <li><code>M</code> follows <b>L</b> direction (opposite <b>R</b>).</li>
+                <li><code>E</code> follows <b>D</b> direction (opposite <b>U</b>).</li>
+                <li><code>S</code> follows <b>F</b> direction (opposite <b>B</b>).</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>Wide turns (two-layer)</summary>
+          <p class="muted">The simulator doesn’t have separate wide-move inputs. To emulate a wide turn, perform the listed <b>outer face</b> + <b>slice</b> in sequence.</p>
+          <div class="cols">
+            <div>
+              <b>Notation (either form):</b>
+              <ul class="tight">
+                <li><code>r r' r2</code> or <code>Rw Rw' Rw2</code></li>
+                <li><code>l l' l2</code> or <code>Lw Lw' Lw2</code></li>
+                <li><code>u u' u2</code> or <code>Uw Uw' Uw2</code></li>
+                <li><code>d d' d2</code> or <code>Dw Dw' Dw2</code></li>
+                <li><code>f f' f2</code> or <code>Fw Fw' Fw2</code></li>
+                <li><code>b b' b2</code> or <code>Bw Bw' Bw2</code></li>
+              </ul>
+            </div>
+            <div>
+              <b>Emulation on 3×3 (outer + slice):</b>
+              <ul class="tight">
+                <li><code>r = R + M'</code> (two rightmost layers)</li>
+                <li><code>l = L + M</code></li>
+                <li><code>u = U + E'</code></li>
+                <li><code>d = D + E</code></li>
+                <li><code>f = F + S</code></li>
+                <li><code>b = B + S'</code></li>
+              </ul>
+              <p class="muted" style="margin-top:6px">Add <code>'</code> or <code>2</code> to apply the same relation (e.g., <code>r' = R' + M</code>).</p>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>Cube rotations (whole-cube)</summary>
+          <div class="cols">
+            <div>
+              <ul class="tight">
+                <li><code>x x' x2</code> — rotate cube like <b>R</b> (left-right axis)</li>
+                <li><code>y y' y2</code> — rotate cube like <b>U</b> (up-down axis)</li>
+                <li><code>z z' z2</code> — rotate cube like <b>F</b> (front-back axis)</li>
+              </ul>
+            </div>
+            <div>
+              <p class="muted">Rotations change your perspective. Algorithms often assume an orientation (e.g., <code>y</code> before a sequence). Note that the simulator will <b> NOT </b> adjust face notations for rotations (for now :3) </p>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>Notation quick list (all primitives)</summary>
+          <p class="muted">Every move below also has <code>'</code> and <code>2</code> variants.</p>
+          <p style="word-break:break-word">
+            <code>R L U D F B</code> ·
+            <code>M E S</code> ·
+            <code>r l u d f b</code> / <code>Rw Lw Uw Dw Fw Bw</code> ·
+            <code>x y z</code>
+          </p>
+        </details>
+      </div>
+
+      <div class="card">
+        <h2>Reading algorithms</h2>
+        <ul>
+          <li><b>Concatenation</b>: moves go left → right, e.g., <code>R U R' U'</code>.</li>
+          <li><b>Parentheses / powers</b>: <code>(R U R' U')</code><code>×3</code> means repeat 3 times.</li>
+          <li><b>Setup moves</b>: a short prefix (e.g., <code>y</code>) reorients before the main sequence.</li>
+          <li><b>Fingertricks</b>: primes vs non-primes usually use different fingers.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h2>You’re ready to start!</h2>
+      <p>With pieces, colors, and full notation in place, you can learn a beginner method (cross → first layer corners → second layer edges → last layer). We’ll add that interactive path here next.</p>
+      <div class="row">
+        <button id="btn-main-2">Main</button>
+        <button id="btn-back-2">◀ Back</button>
+        <button id="btn-continue-2">Continue ▶</button>
+      </div>
+    </div>
+  </main>
+
+<script>
+(() => {
+  const THEMES = {
+    default:{v:{bg:'#0b0c10',panel:'#121420',ink:'#e8eefc',muted:'#92a0b8',line:'#1b2133',splashA:'#11182a'}},
+    cream:{v:{bg:'#f4efe6',panel:'#fffaf2',ink:'#2c2a25',muted:'#6b665b',line:'#e1d9c9',splashA:'#efe7d8'}},
+    caramel:{v:{bg:'#2a1f1a',panel:'#3b2b22',ink:'#f8e9d4',muted:'#d9c2a8',line:'#4c3a30',splashA:'#3a2a22'}},
+    cyber:{v:{bg:'#0a0f0a',panel:'#0f1510',ink:'#d5ffd5',muted:'#90c990',line:'#183018',splashA:'#0f1c10'}},
+    nord:{v:{bg:'#2e3440',panel:'#3b4252',ink:'#eceff4',muted:'#c0c8d5',line:'#4c566a',splashA:'#323a49'}},
+    dracula:{v:{bg:'#282a36',panel:'#1e2029',ink:'#f8f8f2',muted:'#b6b6c1',line:'#3b3e4b',splashA:'#2f3140'}},
+    solarDark:{v:{bg:'#002b36',panel:'#073642',ink:'#eee8d5',muted:'#93a1a1',line:'#0b3a46',splashA:'#03313c'}},
+    solarLight:{v:{bg:'#fdf6e3',panel:'#f5efd9',ink:'#073642',muted:'#657b83',line:'#e6dec4',splashA:'#efe8d2'}},
+    catMocha:{v:{bg:'#1e1e2e',panel:'#242437',ink:'#cdd6f4',muted:'#a6adc8',line:'#313244',splashA:'#23233a'}},
+    gruvDark:{v:{bg:'#1d2021',panel:'#282828',ink:'#ebdbb2',muted:'#d5c4a1',line:'#3c3836',splashA:'#232524'}},
+    gruvLight:{v:{bg:'#fbf1c7',panel:'#f2e5bc',ink:'#3c3836',muted:'#7c6f64',line:'#e0d2a4',splashA:'#f5e8bf'}},
+    oneDark:{v:{bg:'#21252b',panel:'#282c34',ink:'#e6efff',muted:'#a0afc1',line:'#323844',splashA:'#252a31'}},
+    synthwave:{v:{bg:'#1b1227',panel:'#231833',ink:'#fedaff',muted:'#d7b6ff',line:'#3a2857',splashA:'#23173a'}},
+    monokai:{v:{bg:'#272822',panel:'#2e2f27',ink:'#f8f8f2',muted:'#c2c2b4',line:'#3b3c34',splashA:'#2c2d26'}},
+    mint:{v:{bg:'#0e1412',panel:'#111a16',ink:'#d9fff2',muted:'#9de5cf',line:'#173026',splashA:'#15231e'}},
+    rosePine:{v:{bg:'#191724',panel:'#1f1d2e',ink:'#e0def4',muted:'#908caa',line:'#2a2837',splashA:'#201e2f'}},
+    highContrast:{v:{bg:'#000000',panel:'#0a0a0a',ink:'#ffffff',muted:'#bfbfbf',line:'#222',splashA:'#101010'}},
+    mono:{v:{bg:'#111114',panel:'#16171a',ink:'#f1f2f5',muted:'#a9acb3',line:'#272a33',splashA:'#1b1c20'}}
+  };
+  const STORAGE_KEY='erno_theme_v1';
+  const root=document.documentElement.style;
+  function hexToRgb(h){ h=h.replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
+  function rgbToHex({r,g,b}){ const n=(r<<16)|(g<<8)|b; return '#'+n.toString(16).padStart(6,'0'); }
+  function mix(a,b,t){ const A=hexToRgb(a),B=hexToRgb(b); return rgbToHex({r:Math.round(A.r+(B.r-A.r)*t),g:Math.round(A.g+(B.g-A.g)*t),b:Math.round(A.b+(B.b-A.b)*t)}); }
+  function applyTheme(v){
+    const card = mix(v.panel, v.bg, 0.15);
+    const btn = mix(v.panel, v.line, 0.25);
+    const btnBorder = mix(v.line, v.panel, 0.25);
+    root.setProperty('--bg',v.bg); root.setProperty('--panel',v.panel); root.setProperty('--ink',v.ink);
+    root.setProperty('--muted',v.muted); root.setProperty('--line',v.line); root.setProperty('--splashA',v.splashA||v.panel);
+    root.setProperty('--card',card); root.setProperty('--btn',btn); root.setProperty('--btnBorder',btnBorder);
+  }
+  function applyCurrent(){ const id=localStorage.getItem(STORAGE_KEY)||'default'; applyTheme((THEMES[id]||THEMES.default).v); }
+  applyCurrent();
+  window.addEventListener('storage',(e)=>{ if(e.key===STORAGE_KEY) applyCurrent(); });
+
+  // Splash
+  const splash=document.getElementById('splash'), sub=document.getElementById('splash-sub');
+  function show(msg){ sub.textContent=msg; splash.classList.remove('hide'); }
+  function hide(){ splash.classList.add('hide'); }
+  window.addEventListener('load', ()=>{ setTimeout(()=>hide(), 400); });
+
+  const goMain=()=>{ show('Returning to Main Page…'); setTimeout(()=>{ window.location.href='adaptive-move-picker.html'; }, 500); };
+  const goBack=()=>{ show('Returning to Intro…'); setTimeout(()=>{ window.location.href='adaptive-tutorial-intro.html'; }, 500); };
+  const goNext=()=>{ show('Loading Beginner Tutorial…'); setTimeout(()=>{ window.location.href='adaptive-tutorial-firstSteps.html'; }, 500); };
+
+  // Safely bind if elements exist
+  ['btn-main','btn-main-2'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener('click', goMain);
+  });
+  ['btn-back','btn-back-2'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener('click', goBack);
+  });
+  ['btn-continue','btn-continue-2'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener('click', goNext);
+  });
+})();
+</script>
+</body>
+</html>
