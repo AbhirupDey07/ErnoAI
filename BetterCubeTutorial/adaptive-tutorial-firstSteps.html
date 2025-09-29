@@ -23,10 +23,17 @@ button:disabled{opacity:.55;filter:grayscale(.2);cursor:not-allowed}
 canvas{display:block;width:100%;height:100%; touch-action:none;}
 
 /* Move Picker — updated to the “new keyboard” style */
-#movePicker{position:fixed;right:12px;bottom:12px;z-index:21;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 10px 24px rgba(0,0,0,.35);width:clamp(320px,34vw,520px);height:clamp(320px,34vw,520px);display:flex;flex-direction:column;}
-#movePicker h3{margin:0 0 8px 0;font-size:13px;font-weight:800;flex:0 0 auto}
-.keygrid{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:1fr;gap:6px;flex:1;min-height:0}
-.btn-key{font-family:ui-monospace,Consolas,monospace;display:grid;place-items:center;border-radius:10px;border:1px solid var(--btnBorder);background:var(--btn);color:var(--ink);font-weight:800;cursor:pointer;transition:filter .15s ease;font-size:13px;line-height:1;padding:0;min-height:0;min-width:0;width:100%;height:100%;}
+#movePicker{
+  position:fixed;right:12px;bottom:12px;z-index:21;
+  background:var(--card);color:var(--ink);border:1px solid var(--line);
+  border-radius:12px;padding:8px;box-shadow:0 10px 24px rgba(0,0,0,.35);min-width:min(720px,92vw);backdrop-filter:blur(2px);
+}
+#movePicker h3{margin:0 0 6px 0;font-size:13px;font-weight:800}
+.keygrid{display:flex;flex-wrap:wrap;gap:6px}
+.btn-key{
+  font-family:ui-monospace,Consolas,monospace;padding:.45rem .65rem;border-radius:10px;border:1px solid var(--btnBorder);
+  background:var(--btn);color:var(--ink);font-weight:800;cursor:pointer;transition:filter .15s ease
+}
 .btn-key:hover{filter:brightness(1.07)}
 .btn-key:focus{outline:2px solid #2f4fb3;outline-offset:1px}
 
@@ -215,7 +222,7 @@ okBtn.addEventListener('click', ()=>{
   document.body.appendChild(splash);
   splash.querySelector('span').textContent = leaveDest==='main' ? 'Returning to Main Page…' : 'Returning to Basics…';
   modal.classList.remove('show');
-  setTimeout(()=>{ location.href = leaveDest==='main' ? 'adaptive-move-picker.h' : 'adaptive-tutorial-basics.html'; }, 300);
+  setTimeout(()=>{ location.href = leaveDest==='main' ? 'adaptive-move-picker.html' : 'adaptive-tutorial-basics.html'; }, 300);
 });
 cancelBtn.addEventListener('click', closeConfirm);
 
@@ -286,9 +293,10 @@ window.addEventListener('wheel',e=>{ camera.position.multiplyScalar(1+Math.sign(
 /* ---------- Picker + turning core (Adaptive) ---------- */
 const AX={x:new THREE.Vector3(1,0,0),y:new THREE.Vector3(0,1,0),z:new THREE.Vector3(0,0,1)};
 let turning=false;
+
 function animateTo(pivot, axisVec, start, target, sel, done){
   turning=true;
-  const dur=Math.max(50, 240 - 31*5); // same speed as original tutorial (fixed ~31)
+  const dur=Math.max(50, 240 - 31*5);
   const t0=performance.now();
   const tick=t=>{ const k=Math.min(1,(t-t0)/dur), ang=start+(target-start)*k; pivot.setRotationFromAxisAngle(axisVec,ang); renderer.render(scene,camera);
     if(k<1) requestAnimationFrame(tick); else { pivot.updateMatrixWorld(true); for(const c of sel){ cubeGroup.attach(c); c.position.set(Math.round(c.position.x),Math.round(c.position.y),Math.round(c.position.z)); } cubeGroup.remove(pivot); turning=false; done&&done(); } };
@@ -296,12 +304,36 @@ function animateTo(pivot, axisVec, start, target, sel, done){
 }
 function select(axis,layer){ const out=[]; for(const c of cubies){ const v=axis==='x'?c.position.x:axis==='y'?c.position.y:c.position.z; if(Math.round(v)===layer) out.push(c);} return out; }
 function rotate(axis,layer,sign,cb){ if(turning) return; const sel=select(axis,layer); const pivot=new THREE.Group(); cubeGroup.add(pivot); sel.forEach(c=>pivot.attach(c)); animateTo(pivot,AX[axis],0,sign*(Math.PI/2),sel,cb); }
-function rotateWhole(axis,sign,reps,cb){ if(turning) return; const sel=cubies.slice(); const pivot=new THREE.Group(); cubeGroup.add(pivot); sel.forEach(c=>pivot.attach(c));
-  const step=(left)=>{ if(left<=0){ cb&&cb(); return; } animateTo(pivot,AX[axis],0,sign*(Math.PI/2),sel,()=>step(left-1)); };
-  step(reps||1);
+
+/* === Whole-cube rotations rotate cubeGroup itself (new zero each time) === */  // <<< CHANGED
+function rotateWhole(axis,sign,reps,cb){                                       // <<< CHANGED
+  if(turning) return;                                                           // <<< CHANGED
+  const dur=Math.max(50, 240 - 31*5);                                          // <<< CHANGED
+  const quarter=sign*(Math.PI/2);                                               // <<< CHANGED
+  const step=(left)=>{                                                          // <<< CHANGED
+    if(left<=0){ cb&&cb(); return; }                                           // <<< CHANGED
+    turning=true;                                                               // <<< CHANGED
+    const startQ=cubeGroup.quaternion.clone();                                  // <<< CHANGED
+    const targetQ=new THREE.Quaternion().setFromAxisAngle(AX[axis], quarter);   // <<< CHANGED
+    const t0=performance.now();                                                 // <<< CHANGED
+    const tick=t=>{                                                             // <<< CHANGED
+      const k=Math.min(1,(t-t0)/dur);                                           // <<< CHANGED
+      const ang=quarter*k;                                                      // <<< CHANGED
+      const qStep=new THREE.Quaternion().setFromAxisAngle(AX[axis], ang);       // <<< CHANGED
+      cubeGroup.quaternion.copy(startQ.clone().multiply(qStep));                // <<< CHANGED (local axis post-multiply)
+      renderer.render(scene,camera);                                            // <<< CHANGED
+      if(k<1){ requestAnimationFrame(tick); } else {                            // <<< CHANGED
+        cubeGroup.quaternion.copy(startQ.clone().multiply(targetQ));            // <<< CHANGED
+        turning=false;                                                          // <<< CHANGED
+        step(left-1);                                                           // <<< CHANGED
+      }                                                                         
+    };
+    requestAnimationFrame(tick);                                                // <<< CHANGED
+  };
+  step(reps||1);                                                                // <<< CHANGED
 }
 
-/* ---------- Drag turning (kept from tutorial, with guards) ---------- */
+/* ---------- Drag turning (kept, but compute in cube local space) ---------- */
 const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
 const toNDC=e=>{ const r=canvas.getBoundingClientRect(); ndc.x=((e.clientX-r.left)/r.width)*2-1; ndc.y=-((e.clientY-r.top)/r.height)*2+1; };
 function pick(e){ toNDC(e); ray.setFromCamera(ndc,camera); const hit=ray.intersectObjects(cubeGroup.children,true)[0]; if(!hit) return null; let root=hit.object; while(root && root.parent!==cubeGroup) root=root.parent; const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,0,1).applyQuaternion(hit.object.getWorldQuaternion(new THREE.Quaternion())); return {cubie:root,normal:n.normalize()}; }
@@ -319,20 +351,35 @@ canvas.addEventListener('pointerdown',e=>{
 canvas.addEventListener('pointermove',e=>{
   if(!drag.active||turning) return;
   const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy,d2=dx*dx+dy*dy;
+
+  // Work in cube-local space                                              // <<< CHANGED
+  const invQ = cubeGroup.getWorldQuaternion(new THREE.Quaternion()).invert();  // <<< CHANGED
+  const nW = pick(e)?.normal || new THREE.Vector3(0,0,1);                      // <<< CHANGED
+  const n  = nW.clone().applyQuaternion(invQ);                                  // <<< CHANGED (face normal in cube local)
+
   if(!drag.axis){
-    const n=pick(e)?.normal||new THREE.Vector3(0,0,1);
-    const cand=Math.abs(n.x)>0.8?['y','z']:Math.abs(n.y)>0.8?['x','z']:['x','y'];
-    const {r,u}=camBasis(); const v=new THREE.Vector3(0,0,0).addScaledVector(r,dx).addScaledVector(u,-dy).normalize();
-    let axis=cand[0],best=-1; for(const a of cand){ const s=Math.abs(v.dot(AXV[a])); if(s>best){best=s; axis=a;}}
+    const cand=Math.abs(n.x)>0.8?['y','z']:Math.abs(n.y)>0.8?['x','z']:['x','y']; // <<< CHANGED (use local normal)
+    const {r,u}=camBasis();
+    const dragWorld=new THREE.Vector3().addScaledVector(r,dx).addScaledVector(u,-dy).normalize();
+    const dragLocal=dragWorld.applyQuaternion(invQ).normalize();               // <<< CHANGED (localize drag dir)
+    let axis=cand[0],best=-1;
+    for(const a of cand){
+      const s=Math.abs(dragLocal.dot(AXV[a]));                                 // <<< CHANGED (compare in local)
+      if(s>best){best=s; axis=a;}
+    }
     const info2=pick(e); if(!info2) return;
     const layerGuess = Math.max(-1,Math.min(1,Math.round(axis==='x'?info2.cubie.position.x:axis==='y'?info2.cubie.position.y:info2.cubie.position.z)));
     const need=(layerGuess===0?AXIS_LOCK_PX2_SLICE:AXIS_LOCK_PX2_FACE); if(d2<need) return;
     drag.axis=axis; drag.layer=layerGuess; drag.sel=select(axis,layerGuess); drag.pivot=new THREE.Group(); cubeGroup.add(drag.pivot); drag.sel.forEach(c=>drag.pivot.attach(c));
-    drag.plus=new THREE.Vector3().crossVectors(n,AXV[axis]).normalize();
+    drag.plus=new THREE.Vector3().crossVectors(n,AXV[axis]).normalize();       // <<< CHANGED (local cross)
   }
-  const {r,u}=camBasis(); const dragWorld=new THREE.Vector3(0,0,0).addScaledVector(r,dx).addScaledVector(u,-dy).normalize();
-  const s=dragWorld.dot(drag.plus); drag.angle=THREE.MathUtils.clamp(s*Math.PI,-3.2,3.2);
-  drag.pivot.setRotationFromAxisAngle(AXV[drag.axis], drag.angle); renderer.render(scene,camera);
+  const {r,u}=camBasis();
+  const dragWorld=new THREE.Vector3().addScaledVector(r,dx).addScaledVector(u,-dy).normalize();
+  const dragLocal=dragWorld.applyQuaternion(invQ).normalize();                 // <<< CHANGED
+  const s=dragLocal.dot(drag.plus);                                            // <<< CHANGED
+  drag.angle=THREE.MathUtils.clamp(s*Math.PI,-3.2,3.2);
+  drag.pivot.setRotationFromAxisAngle(AXV[drag.axis], drag.angle);
+  renderer.render(scene,camera);
 });
 function commitOrCancel(){
   if(!drag.axis || !drag.pivot){ resetDrag(); return; }
@@ -355,11 +402,22 @@ canvas.addEventListener('pointerup',()=>{ if(drag.active) commitOrCancel(); });
 window.addEventListener('pointerup', ()=>{ if(drag.active) commitOrCancel(); });
 canvas.addEventListener('pointercancel', ()=>{ if(!drag.active) return; if(!drag.axis || !drag.pivot){ resetDrag(); return; } animateTo(drag.pivot, AXV[drag.axis], drag.angle, 0, drag.sel, ()=>resetDrag()); });
 
-/* ---------- Adaptive mapping (from Adaptive Move Picker) ---------- */
-function majorAxis(v){ const ax=Math.abs(v.x),ay=Math.abs(v.y),az=Math.abs(v.z); if(ax>=ay && ax>=az) return {axis:'x', sgn:v.x>=0?+1:-1}; if(ay>=ax && ay>=az) return {axis:'y', sgn:v.y>=0?+1:-1}; return {axis:'z', sgn:v.z>=0?+1:-1}; }
+/* ---------- Adaptive mapping (now uses cube-local camera basis) ---------- */   // <<< CHANGED
+function majorAxis(v){
+  const ax = Math.abs(v.x);
+  const ay = Math.abs(v.y);
+  const az = Math.abs(v.z);
+  if (ax >= ay && ax >= az) return { axis: 'x', sgn: v.x >= 0 ? +1 : -1 };
+  if (ay >= ax && ay >= az) return { axis: 'y', sgn: v.y >= 0 ? +1 : -1 };
+  return { axis: 'z', sgn: v.z >= 0 ? +1 : -1 };
+}
 function viewMapping(){
   const {f,r,u}=camBasis();
-  const Rm=majorAxis(r), Um=majorAxis(u), Fm=majorAxis(new THREE.Vector3(-f.x,-f.y,-f.z));
+  const invQ = cubeGroup.getWorldQuaternion(new THREE.Quaternion()).invert();  // <<< CHANGED
+  const rL = r.clone().applyQuaternion(invQ);                                   // <<< CHANGED
+  const uL = u.clone().applyQuaternion(invQ);                                   // <<< CHANGED
+  const fL = new THREE.Vector3(-f.x,-f.y,-f.z).applyQuaternion(invQ);           // <<< CHANGED
+  const Rm=majorAxis(rL), Um=majorAxis(uL), Fm=majorAxis(fL);                   // <<< CHANGED
   const map={
     R:{axis:Rm.axis, layer:Rm.sgn>0?+1:-1, sgn:Rm.sgn}, L:{axis:Rm.axis, layer:Rm.sgn>0?-1:+1, sgn:-Rm.sgn},
     U:{axis:Um.axis, layer:Um.sgn>0?+1:-1, sgn:Um.sgn}, D:{axis:Um.axis, layer:Um.sgn>0?-1:+1, sgn:-Um.sgn},
@@ -380,7 +438,7 @@ function labelFromAction(axis,layer,sign,reps=1){
   };
   const letter=matchFace(axis,layer), entry=m[letter], isSlice=(letter==='M'||letter==='E'||letter==='S');
   let cw=isSlice ? (sign=== entry.sgn) : (sign===-entry.sgn);
-  if(letter==='E'||letter==='S'||letter==='M') cw=!cw; /* flip M/E/S sense */
+  if(letter==='E'||letter==='S'||letter==='M') cw=!cw;
   const suf=reps===2?'2':(cw?'':"'"); return letter+suf;
 }
 function moveToAction(letter,suffix){
@@ -388,18 +446,19 @@ function moveToAction(letter,suffix){
   let reps=1, cw=true;
   if(suffix==="2"){ reps=2; cw=true; }
   else if(suffix=="'"){ cw=false; }
-  if(letter==='E'||letter==='S'||letter==='M') cw=!cw; /* flip M/E/S sense */
+  if(letter==='E'||letter==='S'||letter==='M') cw=!cw;
   const isSlice=(letter==='M'||letter==='E'||letter==='S');
   const sign=isSlice ? (cw?+M.sgn:-M.sgn) : (cw?-M.sgn:+M.sgn);
   return {axis:M.axis, layer:M.layer, sign, reps};
 }
 
 /* ---------- Move Picker (new keyboard incl. x/y/z) ---------- */
+/* ---------- Move Picker (no whole-cube rotations) ---------- */
 const labels=[
   'R',"R'", 'U',"U'", 'F',"F'", 'L',"L'", 'D',"D'", 'B',"B'",
-  'M',"M'", 'E',"E'", 'S',"S'",
-  'x',"x'", 'y',"y'", 'z',"z'"
+  'M',"M'", 'E',"E'", 'S',"S'"
 ];
+
 const moveGrid=document.getElementById('moveGrid');
 function applyLabel(lbl, cb){
   if(turning) return;
@@ -407,7 +466,7 @@ function applyLabel(lbl, cb){
   if(!m) return;
   const letter=m[1], suf=m[2]||'';
   if('xyz'.includes(letter)){
-    const axis=letter, reps=(suf==='2')?2:1, sign=(suf==="'")?-1:+1;
+    const axis=letter, reps=(suf==='2')?2:1, sign=(suf==="'")?+1:-1;
     rotateWhole(axis,sign,reps,cb);
   }else{
     const a=moveToAction(letter,suf);
