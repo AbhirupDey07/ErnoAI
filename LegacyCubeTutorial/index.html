@@ -755,7 +755,9 @@ a:hover {
         showSplash('Disabling LegacyCube, enabling BetterCube…');
         setTimeout(()=>{
           showSplash('Loading assets…');
-          setTimeout(()=>{ window.location.href='adaptive-move-picker.html'; }, 550);
+setTimeout(()=>{
+  window.location.href = '/BetterCubeTutorial/adaptive-move-picker.html';
+}, 550);
         }, 550);
       });
     }

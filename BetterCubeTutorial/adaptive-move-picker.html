@@ -456,9 +456,12 @@
         settingsBackdrop.hidden = true;
         if(!splash.isConnected) document.body.appendChild(splash);
         showSplash('Disabling BetterCube, enabling LegacyCube…');
-        setTimeout(()=>{ showSplash('Loading assets…'); setTimeout(()=>{ window.location.href='index.html'; }, 550); }, 550);
-      });
-    }
+        setTimeout(()=>{
+  window.location.href = '/LegacyCubeTutorial/index.html';
+}, 550);
+        }, 550);
+      };
+    
 
     /* ---------- Layout sync ---------- */
     const asideEl=document.querySelector('aside'); const persistEl=document.getElementById('persist');

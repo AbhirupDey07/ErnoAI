@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Erno AI — Adaptive Tutorial • Daisy</title>
+<title>Erno AI — Adaptive Tutorial • Cross</title>
 <style>
 :root{
   --bg:#0b0c10; --panel:#121420; --ink:#e8eefc; --muted:#92a0b8; --line:#1b2133; --splashA:#11182a;
@@ -24,7 +24,7 @@ button:disabled{opacity:.55;filter:grayscale(.2);cursor:not-allowed}
 #stage{position:absolute;inset:0}
 canvas{display:block;width:100%;height:100%;touch-action:none}
 
-/* Move Picker (theme-flexible, matches tutorial-daisy style) */
+/* Move Picker (theme-flexible, matches tutorial style) */
 #movePicker{
   position:fixed;right:12px;bottom:12px;z-index:21;
   background:var(--card);color:var(--ink);border:1px solid var(--line);
@@ -60,7 +60,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .btn-ghost{background:transparent; border:1px solid var(--btnBorder); color:var(--ink);}
 .modal-backdrop.show{display:grid}
 
-/* Coach overlays (exact look) */
+/* Coach overlays */
 .coach{
   position:fixed; z-index:2000; pointer-events:none; color:var(--ink);
   font:13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
@@ -84,7 +84,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
 .hidden{display:none}
 
-/* Intro popup (theme-flexible) */
+/* Intro popup */
 #introBackdrop{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.55); backdrop-filter:blur(2px); z-index:3000;}
 #introBackdrop.show{display:grid}
 #introCard{
@@ -103,21 +103,35 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .intro-copy p{margin:.2rem 0 .7rem 0; color:var(--ink)}
 .intro-copy ul{margin:.2rem 0 .8rem 1.1rem; color:var(--muted)}
 .intro-foot{position:sticky; bottom:0; background:var(--panel); border-top:1px solid var(--line); padding:12px 16px; display:flex; gap:10px; justify-content:flex-end; align-items:center}
+
+/* Hint toast */
+#hintToast{
+  position:fixed; left:12px; bottom:12px; max-width:min(560px,92vw);
+  background:var(--panel); color:var(--ink); border:1px solid var(--line);
+  border-radius:12px; padding:10px 12px; box-shadow:0 12px 28px rgba(0,0,0,.4);
+  z-index:2200; display:none;
+}
+#hintToast.show{ display:block; animation:hintIn .18s ease-out }
+@keyframes hintIn{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
+#hintToast b{font-weight:800}
+#hintToast .muted{color:var(--muted); font-weight:600; font-size:12px}
 </style>
 </head>
 <body>
 <div id="splash">
   <div class="inner">
-    <h1>Erno AI<span style="display:block;opacity:.85;font-size:14px;margin-top:6px">Loading Daisy…</span></h1>
+    <h1>Erno AI<span style="display:block;opacity:.85;font-size:14px;margin-top:6px">Loading Cross…</span></h1>
     <div class="spinner" aria-hidden="true"></div>
   </div>
 </div>
 
-<div id="brand">Erno AI: Daisy</div>
+<div id="brand">Erno AI: Cross</div>
 <div id="topbar">
-  <button id="btn-restart" title="Reset to the saved First Steps state">⟲ Restart</button>
+  <button id="btn-restart" title="Reset to your saved Cross start">⟲ Restart</button>
   <button id="btn-main">Main Page</button>
-  <button id="btn-check">Check Daisy</button>
+  <button id="btn-check">Check Cross</button>
+  <button id="btn-hint" title="Suggest a next step">💡 Hint</button>
+  <button id="btn-instructions" title="Open instructions">Instructions</button>
 </div>
 <div id="topright">
   <button id="btn-continue" disabled aria-disabled="true" title="Get 4/4 to continue">Continue →</button>
@@ -126,7 +140,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 <div id="stage"><canvas id="view"></canvas></div>
 
 <div id="movePicker" role="group" aria-label="Move Picker">
-  <h3>Move Picker <span id="score">(number of white edges in place: 0/4)</span></h3>
+  <h3>Move Picker <span id="score">(number of cross edges in place: 0/4)</span></h3>
   <div class="keygrid" id="moveGrid"></div>
 </div>
 
@@ -134,7 +148,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 <div id="confirmWrap" class="modal-backdrop" aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmDesc">
     <h3 id="confirmTitle">Leave this tutorial?</h3>
-    <p id="confirmDesc">You'll lose your tutorial progress if you leave. Are you sure?</p>
+    <p id="confirmDesc">You'll lose unsaved progress if you leave. Are you sure?</p>
     <div class="row">
       <button id="confirmCancel" class="btn btn-ghost">Cancel</button>
       <button id="confirmOk" class="btn">OK</button>
@@ -142,10 +156,10 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
   </div>
 </div>
 
-<!-- Coach: same bubbles; continue appears after unlock -->
+<!-- Coaches -->
 <div id="coach-check" class="coach up" role="note" aria-live="polite">
   <div class="arrow" aria-hidden="true"></div>
-  <div class="caption">Use this to check your Daisy Progress</div>
+  <div class="caption">Use this to check your Cross progress</div>
 </div>
 <div id="coach-moves" class="coach down" role="note" aria-live="polite">
   <div class="caption">Use the <b>Move Picker</b> or drag faces to turn the cube</div>
@@ -153,46 +167,45 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 </div>
 <div id="coach-continue" class="coach up hidden" role="status" aria-live="polite">
   <div class="arrow" aria-hidden="true"></div>
-  <div class="caption">Congrats! Proceed when you are ready</div>
+  <div class="caption">Nice! Cross solved — continue when ready</div>
 </div>
 
-<!-- Daisy Intro -->
+<!-- Cross Intro (popup) -->
 <div id="introBackdrop" role="dialog" aria-modal="true" aria-labelledby="introTitle" aria-describedby="introDesc">
   <div id="introCard">
     <header>
-      <h2 id="introTitle">Step 1: The <span style="color:var(--accent)">Daisy</span></h2>
+      <h2 id="introTitle">Step 2: The <span style="color:var(--accent)">White Cross</span></h2>
       <button id="introClose" title="Close">✕</button>
     </header>
     <div id="introBody">
       <div class="intro-grid">
         <figure class="intro-figure">
-          <img src="https://images.squarespace-cdn.com/content/v1/54f2df67e4b079e94c291e4f/1427442852968-SDBN9BCCN5PIE9VY71BH/step1_rubiks_cube"
-               alt="Illustration of the Daisy: four white edges around the yellow center on the top face.">
+          <img src="https://images.squarespace-cdn.com/content/v1/54f2df67e4b079e94c291e4f/1427442870331-Q2HNC7FV2FW894P2KEBP/cross+done+u+cross.png" alt="Illustration of a solved white cross aligned with side centers."/>
         </figure>
         <div class="intro-copy" id="introDesc">
-          <p><b>What is the Daisy?</b> It’s the pattern where the <b>yellow center</b> is on the top (U) face and the four <b>white edge pieces</b> surround it like petals. The white stickers point <b>up</b>.</p>
-          <p><b>Why make it first?</b> From the Daisy, you can rotate each white edge above its matching side-center color and then flip it down to build a perfect <b>white cross</b>. This keeps things organized and avoids hunting for pieces later.</p>
-          <p><b>What it looks like:</b> Top face shows a yellow center with four white edges around it. From the side, each of those white edges has a second color that should later match the center on that side (e.g., white–green lines up over the green center).</p>
+          <p><b>Goal:</b> Build a <b>white cross</b> on the white-center face <i>and</i> align each edge’s side color with its matching side-center. This organizes the cube so the first layer inserts cleanly.</p>
+          <p><b>From Daisy → Cross:</b></p>
           <ul>
-            <li>Keep the <b>yellow center on top</b>. If it isn’t, rotate the whole cube so it is.</li>
-            <li>Bring each white edge to the top without breaking ones already placed. Use gentle <code>U/R/L/F/D/B</code> turns.</li>
-            <li>If a white edge is on the bottom layer, turn the bottom to place it below an open “petal” slot, then use a face turn to lift it up.</li>
-            <li>Don’t worry about side color matching yet—just get all <b>four whites up around yellow</b>.</li>
+            <li>For each white edge on U, <b>spin U</b> until the <i>side color</i> matches its side-center.</li>
+            <li>Turn that face <code>F2</code> (a half-turn) to flip the edge down next to the white center.</li>
+            <li>If an edge is flipped in the bottom layer, lift it out (e.g., <code>R U R'</code>), realign on U, then <code>F2</code>.</li>
           </ul>
-          <p style="color:var(--muted)">Tip: If you knock a petal out, no stress—just put it back. Once you have <b>4/4</b>, press <b>Check Daisy</b> and then continue.</p>
-          <p style="color:var(--muted)">Tip 2: Right now, you have the <b>BetterCube Model</b> enabled, which means turns on the move picker will adjust based on rotations. Use this to your advantage!</p>
-
+          <p><b>Checker logic:</b> We verify four things: the white edge sits next to the white center, the white sticker faces the white face, and the edge’s side sticker matches the adjacent side-center color. When all <b>4/4</b> are correct, <b>Continue</b> unlocks.</p>
+          <p style="color:var(--muted)">Tip: You can rotate the whole cube freely — the checker reads true 3D geometry, not just what’s “up” on screen.</p>
         </div>
       </div>
     </div>
-    <div class="intro-foot"><button id="introStart">Got it — Let’s start</button></div>
+    <div class="intro-foot"><button id="introStart">Got it — Let’s build the cross</button></div>
   </div>
 </div>
+
+<!-- Hint toast -->
+<div id="hintToast" aria-live="polite"></div>
 
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script>
 (() => {
-/* ===== Theme system (matches tutorial-daisy) ===== */
+/* ===== Theme system (same as Daisy) ===== */
 const STORAGE_KEY='erno_theme_v1';
 const THEMES = {
   default:{name:'Midnight (Default)',v:{bg:'#0b0c10',panel:'#121420',ink:'#e8eefc',muted:'#92a0b8',line:'#1b2133',splashA:'#11182a'}},
@@ -226,7 +239,6 @@ function applyThemeVars(v){
   const btnBorder = mix(v.line, v.panel, 0.25);
   const splashA = v.splashA || v.panel;
   const accent = mix(v.ink, v.panel, 0.2);
-
   rs.setProperty('--bg', v.bg);
   rs.setProperty('--panel', v.panel);
   rs.setProperty('--ink', v.ink);
@@ -264,7 +276,7 @@ okBtn.addEventListener('click', ()=>{
 });
 cancelBtn.addEventListener('click', closeConfirm);
 
-/* ===== Scene (Adaptive engine from First Steps) ===== */
+/* ===== Scene (Adaptive engine cloned from Daisy) ===== */
 const canvas = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -281,7 +293,7 @@ const stage = document.getElementById('stage');
 new ResizeObserver(()=>{ const w=stage.clientWidth,h=stage.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}).observe(stage);
 
 /* Background grid panes */
-(function(size=600,div=120,color=0x223355,opacity=0.07){
+;(function(size=600,div=120,color=0x223355,opacity=0.07){
   const mk=()=>{const gh=new THREE.GridHelper(size,div,color,color);gh.material.transparent=true;gh.material.opacity=opacity;return gh};
   const g=new THREE.Group(), xz1=mk(), xz2=mk(), xy1=mk(), xy2=mk(), yz1=mk(), yz2=mk();
   xz1.position.y=size/2; xz2.position.y=-size/2;
@@ -290,7 +302,7 @@ new ResizeObserver(()=>{ const w=stage.clientWidth,h=stage.clientHeight; rendere
   g.add(xz1,xz2,xy1,xy2,yz1,yz2); scene.add(g);
 })();
 
-/* Build cubies (stickers include userData.localNormal like tutorial-daisy) */
+/* Build cubies (stickers with local normals) */
 const cubeGroup = new THREE.Group(); scene.add(cubeGroup);
 let cubies=[]; const CELL=1, STICKER=.92, GAP=.04;
 const COLORS={ U:0xffd500, D:0xffffff, L:0xcc0000, R:0xff8c1a, F:0x00a040, B:0x0040cc };
@@ -348,6 +360,9 @@ canvas.addEventListener('pointermove',e=>{
 },{passive:false});
 window.addEventListener('wheel',e=>{ camera.position.multiplyScalar(1+Math.sign(e.deltaY)*.08).clampLength(4,40); },{passive:true});
 
+/* Camera basis */
+function camBasis(){ const f=new THREE.Vector3(); camera.getWorldDirection(f).normalize(); const r=new THREE.Vector3().crossVectors(f,camera.up).normalize(); const u=new THREE.Vector3().crossVectors(r,f).normalize(); return {f,r,u}; }
+
 /* Turn engine (Adaptive) */
 const AX={x:new THREE.Vector3(1,0,0), y:new THREE.Vector3(0,1,0), z:new THREE.Vector3(0,0,1)};
 let turning=false;
@@ -370,7 +385,6 @@ function animateTo(pivot, axisVec, start, target, sel, done){
 function select(axis,layer){ const out=[]; for(const c of cubies){ const v=axis==='x'?c.position.x:axis==='y'?c.position.y:c.position.z; if(Math.round(v)===layer) out.push(c);} return out; }
 function rotate(axis,layer,sign,cb){ if(turning) return; const sel=select(axis,layer); const pivot=new THREE.Group(); cubeGroup.add(pivot); sel.forEach(c=>pivot.attach(c)); animateTo(pivot,AX[axis],0,sign*(Math.PI/2),sel,cb); }
 
-/* Whole-cube rotations so UI stays view-relative */
 function rotateWhole(axis,sign,reps,cb){
   if(turning) return;
   const dur=160, quarter=sign*(Math.PI/2);
@@ -393,7 +407,7 @@ function rotateWhole(axis,sign,reps,cb){
   step(reps||1);
 }
 
-/* Drag-to-turn (cube-local) */
+/* Drag-to-turn (cube-local), with Shift-lock */
 const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
 const toNDC=e=>{ const r=canvas.getBoundingClientRect(); ndc.x=((e.clientX-r.left)/r.width)*2-1; ndc.y=-((e.clientY-r.top)/r.height)*2+1; };
 function pick(e){
@@ -404,13 +418,11 @@ function pick(e){
   const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,0,1).applyQuaternion(hit.object.getWorldQuaternion(new THREE.Quaternion()));
   return {cubie:root,normal:n.normalize()};
 }
-function camBasis(){ const f=new THREE.Vector3(); camera.getWorldDirection(f).normalize(); const r=new THREE.Vector3().crossVectors(f,camera.up).normalize(); const u=new THREE.Vector3().crossVectors(r,f).normalize(); return {f,r,u}; }
 const AXV={x:new THREE.Vector3(1,0,0),y:new THREE.Vector3(0,1,0),z:new THREE.Vector3(0,0,1)};
 const drag={active:false,sx:0,sy:0,axis:null,layer:0,sel:[],pivot:null,plus:null,angle:0};
 function resetDrag(){ drag.active=false; drag.axis=null; drag.layer=0; drag.sel=[]; drag.pivot=null; drag.plus=null; drag.angle=0; }
 const AXIS_LOCK_FACE=36, AXIS_LOCK_SLICE=9, SNAP_FRAC_FACE=.10, SNAP_FRAC_SLICE=.08, HALF=.75;
 
-/* ===== SHIFT-LOCK: prevent layer turns while Shift is held ===== */
 let shiftLock=false;
 function cancelDragSnapBack(){
   if(!drag.active) return;
@@ -420,24 +432,18 @@ function cancelDragSnapBack(){
     resetDrag();
   }
 }
-window.addEventListener('keydown', (e)=>{
-  if(e.key==='Shift'){
-    if(!shiftLock){ shiftLock=true; cancelDragSnapBack(); }
-  }
-});
-window.addEventListener('keyup', (e)=>{
-  if(e.key==='Shift'){ shiftLock=false; }
-});
+window.addEventListener('keydown', (e)=>{ if(e.key==='Shift'){ if(!shiftLock){ shiftLock=true; cancelDragSnapBack(); } }});
+window.addEventListener('keyup', (e)=>{ if(e.key==='Shift'){ shiftLock=false; } });
 
 canvas.addEventListener('pointerdown',e=>{
   if(e.pointerType==='mouse' && e.button!==0) return;
-  if(shiftLock || e.shiftKey) return; // don't start a layer drag while Shift is held
+  if(shiftLock || e.shiftKey) return;
   if(turning) return;
   const info=pick(e); if(!info) return;
   drag.active=true; drag.sx=e.clientX; drag.sy=e.clientY; drag.axis=null; drag.hit=info;
 });
 canvas.addEventListener('pointermove',e=>{
-  if(shiftLock){ cancelDragSnapBack(); return; } // if Shift pressed mid-drag, snap back and block
+  if(shiftLock){ cancelDragSnapBack(); return; }
   if(!drag.active||turning) return;
   const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy, d2=dx*dx+dy*dy;
 
@@ -449,18 +455,20 @@ canvas.addEventListener('pointermove',e=>{
     const {r,u}=camBasis();
     const dragWorld=new THREE.Vector3().addScaledVector(r,dx).addScaledVector(u,-dy).normalize();
     const dragLocal=dragWorld.applyQuaternion(invQ).normalize();
-
     let axis=cand[0], best=-1;
     for(const a of cand){ const s=Math.abs(dragLocal.dot(AXV[a])); if(s>best){best=s; axis=a;} }
-
     const info2=pick(e); if(!info2) return;
-    const layerGuess=Math.max(-1,Math.min(1,Math.round(axis==='x'?info2.cubie.position.x:axis==='y'?info2.cubie.position.y:info2.cubie.position.z)));
-    const need=(layerGuess===0?AXIS_LOCK_SLICE:AXIS_LOCK_FACE); if(d2<need) return;
+    const layerGuess=Math.max(-1,Math.min(1),Math.round(axis==='x'?info2.cubie.position.x:axis==='y'?info2.cubie.position.y:axis==='z'?info2.cubie.position.z:0));
+  }
 
-    drag.axis=axis; drag.layer=layerGuess;
-    drag.sel=select(axis,layerGuess);
+  if(!drag.axis){
+    if(d2 < (drag.layer===0?AXIS_LOCK_SLICE:AXIS_LOCK_FACE)) return;
+    drag.axis = Math.abs(n.x)>0.8? (Math.abs(n.y)>0.8? 'z' : 'y') : 'x';
+    const info2=pick(e); if(!info2) return;
+    drag.layer = Math.max(-1,Math.min(1,Math.round(drag.axis==='x'?info2.cubie.position.x:drag.axis==='y'?info2.cubie.position.y:info2.cubie.position.z)));
+    drag.sel=select(drag.axis,drag.layer);
     drag.pivot=new THREE.Group(); cubeGroup.add(drag.pivot); drag.sel.forEach(cu=>drag.pivot.attach(cu));
-    drag.plus=new THREE.Vector3().crossVectors(n,AXV[axis]).normalize();
+    drag.plus=new THREE.Vector3().crossVectors(n,AXV[drag.axis]).normalize();
   }
 
   const {r,u}=camBasis();
@@ -484,21 +492,14 @@ function commitOrCancel(){
     go(reps);
   }
 }
-window.addEventListener('pointerup',()=>{
-  if(shiftLock){ cancelDragSnapBack(); return; }
-  if(drag.active) commitOrCancel();
-});
-canvas.addEventListener('pointercancel',()=>{
-  if(shiftLock){ cancelDragSnapBack(); return; }
-  if(drag.active) commitOrCancel();
-});
+window.addEventListener('pointerup',()=>{ if(shiftLock){ cancelDragSnapBack(); return; } if(drag.active) commitOrCancel(); });
+canvas.addEventListener('pointercancel',()=>{ if(shiftLock){ cancelDragSnapBack(); return; } if(drag.active) commitOrCancel(); });
 
-/* Adaptive mapping + Move Picker (screen-relative) */
+/* Adaptive mapping + Move Picker (same labels as Daisy) */
 function majorAxis(v){ const ax=Math.abs(v.x), ay=Math.abs(v.y), az=Math.abs(v.z);
   if(ax>=ay&&ax>=az) return {axis:'x',sgn:v.x>=0?+1:-1};
   if(ay>=ax&&ay>=az) return {axis:'y',sgn:v.y>=0?+1:-1};
   return {axis:'z',sgn:v.z>=0?+1:-1}; }
-function camBasis(){ const f=new THREE.Vector3(); camera.getWorldDirection(f).normalize(); const r=new THREE.Vector3().crossVectors(f,camera.up).normalize(); const u=new THREE.Vector3().crossVectors(r,f).normalize(); return {f,r,u}; }
 function viewMapping(){
   const {f,r,u}=camBasis();
   const invQ=cubeGroup.getWorldQuaternion(new THREE.Quaternion()).invert();
@@ -518,20 +519,20 @@ function moveToAction(letter,suffix){
   const M=viewMapping()[letter];
   let reps=1, cw=true;
   if(suffix==="2"){ reps=2; cw=true; }
-  else if(suffix=="'"){ cw=false; }
+  else if(suffix==="'"){ cw=false; }
   if(letter==='E'||letter==='S'||letter==='M') cw=!cw;
   const isSlice=(letter==='M'||letter==='E'||letter==='S');
   const sign=isSlice ? (cw?+M.sgn:-M.sgn) : (cw?-M.sgn:+M.sgn);
   return {axis:M.axis, layer:M.layer, sign, reps};
 }
-const labels=["R","R'","U","U'","F","F'","L","L'","D","D'","B","B'","M","M'","E","E'","S","S'"];
+const labels=["R","R'","U","U'","F","F'","L","L'","D","D'","B","B'","M","M'","E","E'","S","S'"]; // EXACTLY like Daisy
 const moveGrid=document.getElementById('moveGrid');
 function applyLabel(lbl,cb){
   if(turning) return;
   const m=/^([RULDFBMESxyz])([2']?)$/.exec(lbl); if(!m) return;
   const letter=m[1], suf=m[2]||'';
   if('xyz'.includes(letter)){
-    const axis=letter, reps=(suf==='2')?2:1, sign=(suf=="'")?+1:-1;
+    const axis=letter, reps=(suf==='2')?2:1, sign=(suf==="'")?+1:-1;
     rotateWhole(axis,sign,reps,cb);
   }else{
     const a=moveToAction(letter,suf);
@@ -540,7 +541,7 @@ function applyLabel(lbl,cb){
 }
 labels.forEach(lbl=>{ const b=document.createElement('button'); b.className='btn-key'; b.textContent=lbl; b.addEventListener('click',()=>applyLabel(lbl)); moveGrid.appendChild(b); });
 
-/* ===== State I/O ===== */
+/* ===== State I/O (carry from Daisy) ===== */
 function serializeState(){ return cubies.map(c=>({ p:[c.position.x,c.position.y,c.position.z], q:[c.quaternion.x,c.quaternion.y,c.quaternion.z,c.quaternion.w] })); }
 function applyState(state){
   if(!state || state.length!==cubies.length) return false;
@@ -553,38 +554,276 @@ function applyState(state){
   return true;
 }
 function loadJSON(key){ try{ return JSON.parse(localStorage.getItem(key)||''); }catch(_){ return null; } }
-const initialState = loadJSON('erno_firststeps_leave_state_v1') || loadJSON('erno_scramble_state_v1');
-if(initialState) applyState(initialState);
 
-/* ===== Daisy check (identical logic) ===== */
-const WHITE = 0xffffff, YELLOW = 0xffd500;
+const carry = loadJSON('erno_cross_entry_state_v1') || null;
+if(carry && carry.cubies && carry.cubeQ){
+  cubeGroup.quaternion.set(carry.cubeQ[0],carry.cubeQ[1],carry.cubeQ[2],carry.cubeQ[3]);
+  applyState(carry.cubies);
+} else {
+  // Fallback to Daisy's saved states if user refreshed directly on this page
+  const fallback = loadJSON('erno_firststeps_leave_state_v1') || loadJSON('erno_scramble_state_v1');
+  if(fallback) applyState(fallback);
+}
+
+// Record initial for Restart
+const initialCrossState = serializeState();
+const initialCubeQ = [cubeGroup.quaternion.x,cubeGroup.quaternion.y,cubeGroup.quaternion.z,cubeGroup.quaternion.w];
+
+/* ===== Cross check (robust, orientation-agnostic) + matches ===== */
+const WHITE = 0xffffff;
 function findCubieAt(x,y,z){ for(const c of cubies){ if(Math.round(c.position.x)===x && Math.round(c.position.y)===y && Math.round(c.position.z)===z) return c;} return null; }
-function stickerFacingUpColor(cubie){
-  if(!cubie) return null;
+function worldPos(obj){ return obj.getWorldPosition(new THREE.Vector3()); }
+function stickerFacingDir(cubie, dir, tol=0.8){
   const q = cubie.getWorldQuaternion(new THREE.Quaternion());
+  let best=null, bestDot=tol;
   for(const ch of cubie.children){
     if(!ch.userData?.isSticker) continue;
     const n = ch.userData.localNormal.clone().applyQuaternion(q).normalize();
-    if(n.y > 0.95) return ch.material.color.getHex();
+    const d = n.dot(dir);
+    if(d>bestDot){ best=ch; bestDot=d; }
+  }
+  return best; // may be null
+}
+function countCross(){
+  const centerD = findCubieAt(0,-1,0);
+  if(!centerD) return 0;
+  const dPos = worldPos(centerD);
+  const dOut = dPos.clone().normalize();
+
+  const targets=[
+    {edge:[ 1,-1, 0], side:[ 1, 0, 0]}, // R-D edge
+    {edge:[-1,-1, 0], side:[-1, 0, 0]}, // L-D edge
+    {edge:[ 0,-1, 1], side:[ 0, 0, 1]}, // F-D edge
+    {edge:[ 0,-1,-1], side:[ 0, 0,-1]}, // B-D edge
+  ];
+
+  let good=0;
+  for(const t of targets){
+    const e = findCubieAt(t.edge[0],t.edge[1],t.edge[2]);
+    const cSide = findCubieAt(t.side[0],t.side[1],t.side[2]);
+    if(!e || !cSide) continue;
+    const sPos = worldPos(cSide);
+    const sOut = sPos.clone().normalize();
+
+    const edgeTowardWhite = stickerFacingDir(e, dOut);
+    if(!edgeTowardWhite || edgeTowardWhite.material.color.getHex() !== WHITE) continue;
+
+    const edgeTowardSide = stickerFacingDir(e, sOut);
+    const sideFaceOnCenter = stickerFacingDir(cSide, sOut);
+    if(!edgeTowardSide || !sideFaceOnCenter) continue;
+    if(edgeTowardSide.material.color.getHex() === sideFaceOnCenter.material.color.getHex()) good++;
+  }
+  return good;
+}
+function getCrossMatches(){
+  const centerD = findCubieAt(0,-1,0);
+  if(!centerD) return [];
+  const dOut = worldPos(centerD).normalize();
+
+  const targets=[
+    {edge:[ 1,-1, 0], side:[ 1, 0, 0]}, // R-D edge
+    {edge:[-1,-1, 0], side:[-1, 0, 0]}, // L-D edge
+    {edge:[ 0,-1, 1], side:[ 0, 0, 1]}, // F-D edge
+    {edge:[ 0,-1,-1], side:[ 0, 0,-1]}, // B-D edge
+  ];
+  const matches=[];
+  for(const t of targets){
+    const e=findCubieAt(t.edge[0],t.edge[1],t.edge[2]);
+    const cSide=findCubieAt(t.side[0],t.side[1],t.side[2]);
+    if(!e || !cSide) continue;
+    const sOut = worldPos(cSide).normalize();
+    const edgeTowardWhite = stickerFacingDir(e, dOut);
+    const edgeTowardSide = stickerFacingDir(e, sOut);
+    const sideFaceOnCenter = stickerFacingDir(cSide, sOut);
+    if(!edgeTowardWhite || !edgeTowardSide || !sideFaceOnCenter) continue;
+    if(edgeTowardWhite.material.color.getHex()===WHITE &&
+       edgeTowardSide.material.color.getHex()===sideFaceOnCenter.material.color.getHex()){
+      matches.push({edge:e, whiteSticker:edgeTowardWhite, sideSticker:edgeTowardSide});
+    }
+  }
+  return matches;
+}
+
+/* ===== Glow/highlight (brighter + outside ring) ===== */
+// tuneables
+const GLOW_SCALE  = 1.55;   // bigger than sticker so it sits outside
+const GLOW_OFFSET = 0.14;   // push further off the face (meters in your scene)
+const GLOW_MS     = 2200;   // duration
+
+let ringTexture=null;
+function getRingTexture(){
+  if(ringTexture) return ringTexture;
+  const c=document.createElement('canvas'); c.width=c.height=256;
+  const g=c.getContext('2d');
+  // "ring" gradient: transparent center -> bright ring -> soft falloff
+  const r=128;
+  const grd=g.createRadialGradient(128,128, r*0.40, 128,128, r*0.98);
+  grd.addColorStop(0.00, 'rgba(255,255,0,0)');      // clear center
+  grd.addColorStop(0.45, 'rgba(255,255,0,0)');      // still clear
+  grd.addColorStop(0.55, 'rgba(255,255,140,0.95)'); // bright ring
+  grd.addColorStop(0.72, 'rgba(255,255,80,0.55)');  // halo
+  grd.addColorStop(1.00, 'rgba(255,255,0,0)');      // fade out
+  g.fillStyle=grd; g.fillRect(0,0,256,256);
+  ringTexture=new THREE.CanvasTexture(c);
+  ringTexture.needsUpdate=true;
+  return ringTexture;
+}
+
+function flashSticker(sticker, ms=GLOW_MS){
+  const tex=getRingTexture();
+  const mat=new THREE.SpriteMaterial({
+    map:tex, transparent:true,
+    depthWrite:false, depthTest:false,   // always visible
+    blending:THREE.AdditiveBlending,
+    opacity:0
+  });
+  const spr=new THREE.Sprite(mat);
+  const nLocal=sticker.userData?.localNormal?.clone()||new THREE.Vector3(0,0,1);
+
+  // sit OUTSIDE the edge + be larger than the sticker
+  spr.scale.set(GLOW_SCALE, GLOW_SCALE, GLOW_SCALE);
+  spr.position.copy(nLocal.clone().multiplyScalar(GLOW_OFFSET));
+  sticker.add(spr);
+
+  const t0=performance.now();
+  (function tick(t){
+    const k=(t-t0)/ms;
+    if(k>=1){ sticker.remove(spr); mat.dispose(); return; }
+    // brighter pulse + a tiny size wobble
+    const osc = 0.5+0.5*Math.sin((t-t0)/120);
+    mat.opacity = 0.55 + 0.40*osc;                 // ⬅️ brightness
+    const wobble = 1 + 0.08*osc;
+    spr.scale.set(GLOW_SCALE*wobble, GLOW_SCALE*wobble, GLOW_SCALE*wobble);
+    requestAnimationFrame(tick);
+  })(t0);
+}
+
+function flashSolvedEdges(){
+  const m=getCrossMatches();
+  for(const it of m){
+    flashSticker(it.whiteSticker);
+    flashSticker(it.sideSticker);
+  }
+}
+
+
+/* ===== Hint system (color-based, orientation-agnostic) ===== */
+const COLOR_NAMES = {
+  [COLORS.L]:'RED', [COLORS.R]:'ORANGE', [COLORS.F]:'GREEN', [COLORS.B]:'BLUE',
+  [WHITE]:'WHITE', [COLORS.U]:'YELLOW'
+};
+function stickerWorldNormal(sticker){
+  const q = sticker.parent.getWorldQuaternion(new THREE.Quaternion());
+  return sticker.userData.localNormal.clone().applyQuaternion(q).normalize();
+}
+function faceOutVector(cubie){ return worldPos(cubie).normalize(); }
+
+function findEdgeByColors(colorA, colorB){
+  for(const c of cubies){
+    let colors=[];
+    for(const ch of c.children){
+      if(ch.userData?.isSticker) colors.push(ch.material.color.getHex());
+    }
+    if(colors.length===2){
+      if(colors.includes(colorA) && colors.includes(colorB)) return c;
+    }
   }
   return null;
 }
-function yellowCenterOnTop(){ const center = findCubieAt(0,1,0); const col = stickerFacingUpColor(center); return col === YELLOW; }
-function countDaisy(){
-  if(!yellowCenterOnTop()) return 0;
-  const targets=[ findCubieAt( 1,1,0), findCubieAt(-1,1,0), findCubieAt(0,1, 1), findCubieAt(0,1,-1) ];
-  let c=0; for(const e of targets){ const col = stickerFacingUpColor(e); if(col === WHITE) c++; } return c;
+function firstUnsovledEdgeInfo(){
+  const centerD = findCubieAt(0,-1,0);
+  if(!centerD) return null;
+  const dOut = faceOutVector(centerD);
+
+  const sides = [
+    {pos:[ 1,0,0], name:'ORANGE', hex:COLORS.R},
+    {pos:[-1,0,0], name:'RED',    hex:COLORS.L},
+    {pos:[ 0,0,1], name:'GREEN',  hex:COLORS.F},
+    {pos:[ 0,0,-1],name:'BLUE',   hex:COLORS.B},
+  ];
+
+  // vectors for side directions to help classify
+  const sideDirs = sides.map(s => ({...s, out: faceOutVector(findCubieAt(s.pos[0],s.pos[1],s.pos[2]))}));
+
+  // Skip solved targets; pick first unsolved by side order above
+  for(const s of sideDirs){
+    const targetEdgeAtBottom = findCubieAt(s.pos[0], -1, s.pos[2]);
+    if(targetEdgeAtBottom){
+      const towardWhite = stickerFacingDir(targetEdgeAtBottom, dOut);
+      const towardSide  = stickerFacingDir(targetEdgeAtBottom, s.out);
+      const sideCenterSticker = stickerFacingDir(findCubieAt(s.pos[0],s.pos[1],s.pos[2]), s.out);
+      if(towardWhite && towardSide && sideCenterSticker &&
+         towardWhite.material.color.getHex()===WHITE &&
+         towardSide.material.color.getHex()===sideCenterSticker.material.color.getHex()){
+        // solved — skip
+        continue;
+      }
+    }
+    // Find the edge cubie (anywhere) that has WHITE + s.hex
+    const edge = findEdgeByColors(WHITE, s.hex);
+    if(!edge) continue;
+
+    // Find its WHITE sticker + side sticker objects
+    let whiteSticker=null, otherSticker=null;
+    for(const ch of edge.children){
+      if(!ch.userData?.isSticker) continue;
+      const h=ch.material.color.getHex();
+      if(h===WHITE) whiteSticker=ch;
+      else if(h===s.hex) otherSticker=ch;
+    }
+    if(!whiteSticker || !otherSticker) continue;
+
+    const nWhite = stickerWorldNormal(whiteSticker);
+    const dotD = nWhite.dot(dOut);
+    const dotU = nWhite.dot(dOut.clone().multiplyScalar(-1));
+
+    // Compare against each side direction to see if white faces a side
+    let sideFacing=null, best=0.8;
+    for(const sd of sideDirs){
+      const d = nWhite.dot(sd.out);
+      if(d>best){ best=d; sideFacing=sd; }
+    }
+
+    let message='';
+    if(dotU>0.8){
+      // white on U
+      message = `Target <b>WHITE–${s.name}</b> is on <b>top</b>. Spin the top layer until the <b>${s.name}</b> sticker lines up with the <b>${s.name}</b> center, then turn the <b>${s.name}</b>-center face <b>180°</b> to drop it next to WHITE.`;
+    }else if(dotD>0.8){
+      // white on D but wrong
+      message = `Target <b>WHITE–${s.name}</b> is in the <b>bottom</b> but misaligned/flipped. Do a quick lift (e.g., a quarter turn on the <b>${s.name}</b>-center face) to bring it to top, align ${s.name} with its center, then turn the <b>${s.name}</b>-center face <b>180°</b>.`;
+    }else if(sideFacing){
+      // white points to a side
+      message = `Target <b>WHITE–${s.name}</b> is in the <b>middle layer</b> with WHITE facing <b>${sideFacing.name}</b>. Turn the <b>${sideFacing.name}</b>-center face to move WHITE to the top, then align ${s.name} with its center on top and turn the <b>${s.name}</b>-center face <b>180°</b>.`;
+    }else{
+      // fallback generic
+      message = `Target <b>WHITE–${s.name}</b> is off the cross. Bring WHITE to the top with a nearby face turn, align ${s.name} with its center on top, then turn the <b>${s.name}</b>-center face <b>180°</b>.`;
+    }
+
+    return {message, edge, whiteSticker, otherSticker};
+  }
+  return null;
+}
+const hintToast = document.getElementById('hintToast');
+let hintTimer=null;
+function showHint(msg){
+  hintToast.innerHTML = `<div>${msg}</div><div class="muted" style="margin-top:6px">Tip: the glow marks the piece I’m talking about.</div>`;
+  hintToast.classList.add('show');
+  clearTimeout(hintTimer);
+  hintTimer=setTimeout(()=>hintToast.classList.remove('show'), 6500);
 }
 
-/* ===== UI wiring (continue coach exact behavior) ===== */
+/* ===== UI wiring ===== */
 const btnRestart = document.getElementById('btn-restart');
 const btnMain = document.getElementById('btn-main');
 const btnCheck = document.getElementById('btn-check');
+const btnHint = document.getElementById('btn-hint');
 const btnContinue = document.getElementById('btn-continue');
 const scoreEl = document.getElementById('score');
 const coachCheck = document.getElementById('coach-check');
 const coachMoves = document.getElementById('coach-moves');
 const coachContinue = document.getElementById('coach-continue');
+const btnInstructions = document.getElementById('btn-instructions');
+btnInstructions.addEventListener('click', openIntro);
 
 function placeCoach(coachEl, targetEl, where){
   if(!coachEl || !targetEl) return;
@@ -608,7 +847,7 @@ function positionCoaches(){
 }
 window.addEventListener('resize', positionCoaches); setTimeout(positionCoaches, 0);
 
-function setScore(v){ scoreEl.textContent = `(number of white edges in place: ${v}/4)`; }
+function setScoreCross(v){ scoreEl.textContent = `(number of cross edges in place: ${v}/4)`; }
 function toggleContinueCoach(show){
   coachContinue.classList.toggle('hidden', !show);
   if(show) { placeCoach(coachContinue, btnContinue, 'below'); }
@@ -617,27 +856,46 @@ function lockContinue(lock=true){
   btnContinue.disabled = lock;
   if(lock) btnContinue.setAttribute('aria-disabled','true');
   else btnContinue.removeAttribute('aria-disabled');
-  toggleContinueCoach(!lock);   // show coach only when unlocked
+  toggleContinueCoach(!lock);
 }
 
 btnCheck.addEventListener('click', ()=>{
-  const n = countDaisy();
-  setScore(n);
-  if(n===4){ lockContinue(false); }
-  else{ lockContinue(true); }
+  const n = countCross();
+  setScoreCross(n);
+  lockContinue(n!==4);
+  if(n>0) flashSolvedEdges(); // <<< glow on solved pieces for ~2s
+});
+
+btnHint.addEventListener('click', ()=>{
+  const info = firstUnsovledEdgeInfo();
+  if(!info){
+    showHint(`Cross is <b>already complete</b>. You can hit <b>Continue</b> when ready.`);
+    return;
+  }
+  // Pulse the target edge’s stickers so the user can spot it
+  flashSticker(info.whiteSticker, 2200);
+  if(info.otherSticker) flashSticker(info.otherSticker, 2200);
+  showHint(info.message);
 });
 
 btnContinue.addEventListener('click', ()=>{
+  const carryNext = {
+    cubies: serializeState(),
+    cubeQ: [cubeGroup.quaternion.x, cubeGroup.quaternion.y, cubeGroup.quaternion.z, cubeGroup.quaternion.w]
+  };
+  localStorage.setItem('erno_after_cross_state_v1', JSON.stringify(carryNext));
   toggleContinueCoach(false);
   document.body.appendChild(splash);
   splash.querySelector('span').textContent = 'Continuing…';
   setTimeout(()=>{ location.href = 'adaptive-tutorial-basics.html'; }, 300);
 });
+
 btnMain.addEventListener('click', openConfirm);
 
 btnRestart.addEventListener('click', ()=>{
-  if(initialState) applyState(initialState);
-  setScore(0);
+  cubeGroup.quaternion.set(initialCubeQ[0],initialCubeQ[1],initialCubeQ[2],initialCubeQ[3]);
+  applyState(initialCrossState);
+  setScoreCross(0);
   lockContinue(true);
 });
 
